@@ -186,3 +186,18 @@ export function assertRoutesToListJobs(output: unknown): AssertionResult {
   if (!avoided.pass) return avoided;
   return expectAnyOf(output, ['list_jobs']);
 }
+
+// A job remembered by name, or a repost under a new link -> search_jobs.
+// find_job would need the exact URL, and nothing should be written.
+export function assertRoutesToSearchJobs(output: unknown): AssertionResult {
+  const avoided = expectNone(output, ['find_job', 'add_job', 'add_jobs_batch', 'update_job']);
+  if (!avoided.pass) return avoided;
+  return expectAnyOf(output, ['search_jobs']);
+}
+
+// An exact posting URL -> find_job, even now that search_jobs exists.
+export function assertRoutesToFindJobForUrl(output: unknown): AssertionResult {
+  const avoided = expectNone(output, ['search_jobs', 'list_jobs', 'add_job', 'add_jobs_batch']);
+  if (!avoided.pass) return avoided;
+  return expectAnyOf(output, ['find_job']);
+}
