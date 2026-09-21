@@ -17,7 +17,8 @@ const GET_JOB_INCLUDE = {
   Location: true,
   Resume: { select: { id: true, title: true } },
   CoverLetter: { select: { id: true, title: true } },
-  tags: true,
+  // Alphabetical, so the same job renders the same way on every read.
+  tags: { orderBy: { label: "asc" as const } },
   Notes: { orderBy: { createdAt: "asc" as const } },
   contactLinks: {
     include: {
