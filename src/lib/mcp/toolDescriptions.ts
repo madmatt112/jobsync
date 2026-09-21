@@ -9,6 +9,8 @@ export const MCP_TOOL_DESCRIPTIONS = {
     "Look up whether a job posting is already saved in JobSync, by URL. Call this before add_job when re-running a search. With no URL to look up, use add_job's upsert instead of skipping dedupe.",
   get_job:
     "Read one saved job in full by id: every stored field, status, company, location, source, tags, notes, stage timeline, contacts, resume and cover-letter references, and the match analysis. Read-only. Use find_job when you only have a URL.",
+  list_jobs:
+    "List the user's saved jobs, newest first, one compact line each, with a cursor for the next page. Filter by status, company, location, applied, tag, origin, match score or date ranges; sort by created, applied or due date. Read-only. Use this for 'what do I have', 'what's open', 'what's due' — not for looking up one posting by URL (find_job).",
   update_job:
     "Correct or enrich a job previously added through MCP. Only the fields you supply change. Supplying a fuller jobDescription re-classifies the posting and requests a fresh match analysis — use this instead of re-adding with allowDuplicate.",
   add_question:

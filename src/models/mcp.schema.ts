@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { APP_CONSTANTS, JOB_STATUS_VALUES } from "@/lib/constants";
+import {
+  APP_CONSTANTS,
+  DISCOVERY_STATUS_VALUES,
+  JOB_STATUS_VALUES,
+  MCP_JOB_ORIGINS,
+  MCP_JOB_SORT_FIELDS,
+  MCP_JOB_SORT_ORDERS,
+} from "@/lib/constants";
 import { WORKPLACE_TYPES, matchEnumEntry } from "@/models/job.model";
 
 // An enum rather than a described string, for the same reason status is one:
@@ -161,6 +168,62 @@ export const McpGetJobInputShape = {
 
 export const McpGetJobSchema = z.object(McpGetJobInputShape);
 export type McpGetJobInput = z.infer<typeof McpGetJobSchema>;
+
+// list_jobs — every field optional; filters AND together. Dates are ISO-8601
+// on the wire and Date objects after parsing, like add_job's.
+const isoDate = (what: string) =>
+  z.string().datetime({ offset: true }).optional().describe(`${what}, ISO-8601 datetime.`);
+
+export const McpListJobsInputShape = {
+  status: z
+    .preprocess(
+      (v) => (typeof v === "string" ? v.toLowerCase() : v),
+      z.enum(JOB_STATUS_VALUES),
+    )
+    .optional()
+    .describe(`Only jobs in this status. One of: ${JOB_STATUS_VALUES.join(", ")}.`),
+  company: z.string().min(1).optional().describe("Substring of the company name (case-insensitive for ASCII)."),
+  location: z.string().min(1).optional().describe("Substring of the location label, e.g. 'Netherlands' or 'Remote'."),
+  applied: z.boolean().optional().describe("true = only jobs you have applied to; false = only jobs you have not."),
+  tag: z.string().min(1).optional().describe("Substring of a tag label."),
+  createdVia: z.string().min(1).optional().describe("Substring of the MCP token name that created the job. For agent-vs-app, use origin instead."),
+  origin: z
+    .enum(MCP_JOB_ORIGINS)
+    .optional()
+    .describe("Who added the job: mcp (any MCP token), chat (in-app agent chat), automation (found by a board scan), app (entered by hand in the web app)."),
+  discoveryStatus: z
+    .enum(DISCOVERY_STATUS_VALUES)
+    .optional()
+    .describe(`Board-scan state: ${DISCOVERY_STATUS_VALUES.join(", ")}. Dismissed discoveries are hidden unless you pass this.`),
+  matchScoreMin: z.number().int().min(0).max(100).optional().describe("Lowest match score to include (0-100). Unscored jobs are excluded."),
+  matchScoreMax: z.number().int().min(0).max(100).optional().describe("Highest match score to include (0-100)."),
+  createdFrom: isoDate("Saved on or after"),
+  createdTo: isoDate("Saved on or before"),
+  appliedFrom: isoDate("Applied on or after"),
+  appliedTo: isoDate("Applied on or before"),
+  dueFrom: isoDate("Due on or after"),
+  dueTo: isoDate("Due on or before"),
+  sortBy: z
+    .enum(MCP_JOB_SORT_FIELDS)
+    .optional()
+    .describe("Date to sort by: created (default), applied or due. Jobs missing that date come last when descending and first when ascending."),
+  sortOrder: z.enum(MCP_JOB_SORT_ORDERS).optional().describe("desc (default, newest first) or asc."),
+  limit: z.number().int().min(1).max(100).optional().describe("Rows per page, 1-100. Default 25."),
+  cursor: z.string().min(1).optional().describe("Cursor from the previous page's footer. Pass the same filters and sort with it."),
+};
+
+const toDate = (v: string | undefined) => (v ? new Date(v) : undefined);
+
+export const McpListJobsSchema = z.object({
+  ...McpListJobsInputShape,
+  createdFrom: McpListJobsInputShape.createdFrom.transform(toDate),
+  createdTo: McpListJobsInputShape.createdTo.transform(toDate),
+  appliedFrom: McpListJobsInputShape.appliedFrom.transform(toDate),
+  appliedTo: McpListJobsInputShape.appliedTo.transform(toDate),
+  dueFrom: McpListJobsInputShape.dueFrom.transform(toDate),
+  dueTo: McpListJobsInputShape.dueTo.transform(toDate),
+});
+export type McpListJobsInput = z.infer<typeof McpListJobsSchema>;
 
 // update_job — every field except jobId is optional; only supplied fields
 // change. Mirrors add_job's field names exactly.

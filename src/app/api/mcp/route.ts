@@ -17,6 +17,8 @@ import {
   McpFindJobSchema,
   McpGetJobInputShape,
   McpGetJobSchema,
+  McpListJobsInputShape,
+  McpListJobsSchema,
   McpUpdateJobInputShape,
   McpUpdateJobSchema,
   McpAddJobsBatchInputShape,
@@ -31,6 +33,7 @@ import { handleReviewResume } from "@/lib/mcp/tools/reviewResume";
 import { handleSaveResumeReview } from "@/lib/mcp/tools/saveResumeReview";
 import { handleFindJob } from "@/lib/mcp/tools/findJob";
 import { handleGetJob } from "@/lib/mcp/tools/getJob";
+import { handleListJobs } from "@/lib/mcp/tools/listJobs";
 import { handleUpdateJob } from "@/lib/mcp/tools/updateJob";
 import { handleAddJobsBatch } from "@/lib/mcp/tools/addJobsBatch";
 import { handleSaveMatchResultsBatch } from "@/lib/mcp/tools/saveMatchResultsBatch";
@@ -131,6 +134,29 @@ async function handler(req: Request): Promise<Response> {
         };
       }
       return handleGetJob(parsed.data, userId);
+    },
+  );
+
+  server.tool(
+    "list_jobs",
+    MCP_TOOL_DESCRIPTIONS.list_jobs,
+    McpListJobsInputShape,
+    async (rawInput) => {
+      if (!hasJobReadScope(auth.scopes)) {
+        return {
+          content: [
+            { type: "text" as const, text: "Insufficient scope. Required: jobs:read" },
+          ],
+        };
+      }
+      const parsed = McpListJobsSchema.safeParse(rawInput);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map((i) => i.message).join("; ");
+        return {
+          content: [{ type: "text" as const, text: `Validation error: ${issues}` }],
+        };
+      }
+      return handleListJobs(parsed.data, userId);
     },
   );
 
