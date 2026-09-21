@@ -178,3 +178,11 @@ export function assertRoutesToReviewResume(output: unknown): AssertionResult {
   const { pass, score, reason } = expectSingle(output, 'review_resume');
   return { pass, score, reason };
 }
+
+// "What's open?" is a read over the tracker -> list_jobs. find_job needs a
+// URL the user never gave, and nothing here should be written.
+export function assertRoutesToListJobs(output: unknown): AssertionResult {
+  const avoided = expectNone(output, ['find_job', 'add_job', 'add_jobs_batch', 'update_job']);
+  if (!avoided.pass) return avoided;
+  return expectAnyOf(output, ['list_jobs']);
+}

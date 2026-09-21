@@ -135,3 +135,12 @@ tests:
     assert:
       - type: javascript
         value: file://./assertions.ts:assertRoutesToReviewResume
+
+  - description: Asking what is open - routes to list_jobs, not find_job
+    vars:
+      userMessage: >
+        What's open in my tracker right now? I want to see everything I haven't
+        heard back on yet.
+    assert:
+      - type: javascript
+        value: file://./assertions.ts:assertRoutesToListJobs
