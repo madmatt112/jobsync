@@ -1,4 +1,4 @@
-import { resolveMcpToken } from "@/lib/mcp/auth";
+import { resolveMcpToken, hasJobReadScope } from "@/lib/mcp/auth";
 import { hashToken } from "@/lib/mcp/tokens";
 import { PrismaClient } from "@prisma/client";
 
@@ -143,5 +143,20 @@ describe("resolveMcpToken", () => {
     const result = await resolveMcpToken(makeRequest("Bearer jsync_valid"));
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("hasJobReadScope", () => {
+  it("accepts a token issued with jobs:read", () => {
+    expect(hasJobReadScope(["jobs:read"])).toBe(true);
+  });
+
+  it("accepts a legacy token that carries only jobs:write", () => {
+    expect(hasJobReadScope(["jobs:write", "questions:write", "resume:write"])).toBe(true);
+  });
+
+  it("refuses a token with neither scope", () => {
+    expect(hasJobReadScope(["questions:write", "resume:write"])).toBe(false);
+    expect(hasJobReadScope([])).toBe(false);
   });
 });
