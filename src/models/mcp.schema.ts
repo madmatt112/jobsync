@@ -148,6 +148,20 @@ export const McpFindJobInputShape = {
 export const McpFindJobSchema = z.object(McpFindJobInputShape);
 export type McpFindJobInput = z.infer<typeof McpFindJobSchema>;
 
+// get_job — id is the only key. Agents get ids from list_jobs, search_jobs,
+// find_job or add_job; a URL lookup stays with find_job.
+export const McpGetJobInputShape = {
+  jobId: z
+    .string()
+    .min(1, "jobId is required")
+    .describe(
+      "The id of a saved job, as returned by list_jobs, search_jobs, find_job or add_job. If you only have a posting URL, call find_job instead.",
+    ),
+};
+
+export const McpGetJobSchema = z.object(McpGetJobInputShape);
+export type McpGetJobInput = z.infer<typeof McpGetJobSchema>;
+
 // update_job — every field except jobId is optional; only supplied fields
 // change. Mirrors add_job's field names exactly.
 export const McpUpdateJobInputShape = {
