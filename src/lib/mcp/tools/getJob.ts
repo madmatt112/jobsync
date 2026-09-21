@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
-import { APP_CONSTANTS } from "@/lib/constants";
+import { originLabel } from "@/lib/mcp/jobQuery";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { hideUnanalyzedScore } from "@/actions/job/shared";
 import { STAGE_DETAIL_INCLUDE, sortStages } from "@/actions/jobStage/shared";
@@ -45,16 +45,6 @@ type JobDetail = Prisma.JobGetPayload<{ include: typeof GET_JOB_INCLUDE }>;
 const day = (d: Date | null | undefined) =>
   d ? new Date(d).toISOString().slice(0, 10) : null;
 
-// Same four labels list_jobs will render, so an agent reading a row and then
-// the detail sees one vocabulary. null createdVia covers both the web app and
-// automation, which automationId tells apart.
-function originOf(job: { createdVia: string | null; automationId: string | null }): string {
-  if (job.createdVia === APP_CONSTANTS.AGENT_CHAT_CREATED_VIA) return "chat";
-  if (job.createdVia != null) return `mcp (${job.createdVia})`;
-  if (job.automationId != null) return "automation";
-  return "app";
-}
-
 function renderDetail(job: JobDetail): string {
   const lines: string[] = [];
   const field = (label: string, value: string | null | undefined) => {
@@ -86,7 +76,7 @@ function renderDetail(job: JobDetail): string {
   field("Applied", job.applied ? `yes${job.appliedDate ? `, ${day(job.appliedDate)}` : ""}` : "no");
   field("Due", day(job.dueDate));
   field("Created", day(job.createdAt));
-  field("Origin", originOf(job));
+  field("Origin", originLabel(job));
   if (job.discoveryStatus) {
     field(
       "Discovery",

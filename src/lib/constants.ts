@@ -353,6 +353,18 @@ export const DISCOVERY_STATUSES = [
   { label: "Dismissed", value: "dismissed" },
 ] as const;
 
+// MCP read tools (list_jobs / search_jobs): sort keys, sort directions, and the
+// four provenance labels an agent can filter on. Kept beside JOB_STATUS_VALUES
+// because the Zod shapes and the query module both need them and neither
+// should import the other for a constant.
+export const MCP_JOB_SORT_FIELDS = ["created", "applied", "due"] as const;
+export const MCP_JOB_SORT_ORDERS = ["asc", "desc"] as const;
+export const MCP_JOB_ORIGINS = ["mcp", "chat", "automation", "app"] as const;
+export const DISCOVERY_STATUS_VALUES = DISCOVERY_STATUSES.map((s) => s.value) as unknown as [
+  string,
+  ...string[],
+];
+
 export const SIDEBAR_LINKS = [
   {
     icon: LayoutDashboard,
