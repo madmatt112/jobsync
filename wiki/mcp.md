@@ -71,13 +71,14 @@ Both snippets are shown in the token dialog with your real URL and token already
 
 ## Which tools does a connected agent get?
 
-Eleven. Nine of them write to your own data and two read it back:
+Twelve. Nine of them write to your own data and three read it back:
 
 - **add_job** — adds a job, resolving or creating company, title, location, source and tags by name, and reporting back what it matched versus created.
 - **add_jobs_batch** — the same thing for up to 10 jobs in one call, for a scheduled run.
 - **find_job** — checks by URL whether a posting is already saved, before adding it again.
 - **get_job** — reads one saved job in full by its id: every field, the company, location and source, tags, notes, the stage timeline with interviewers, linked contacts, and the match analysis. It changes nothing.
 - **list_jobs** — lists your saved jobs one line each, newest first, filtered by status, company, location, tag, applied flag, match score, origin or date range, sorted by created, applied or due date, and paged with a cursor.
+- **search_jobs** — the same list narrowed by words in a job's title, company, description or notes, for a role you remember by name or a repost saved under a different link.
 - **update_job** — corrects or enriches a job that was added through MCP. Only the fields supplied change.
 - **add_question** — adds an entry to your Question Bank, with tags resolved the same way.
 - **review_resume** / **save_resume_review** — hands the agent your default resume and reviewing instructions, then stores the review it writes.
@@ -98,6 +99,8 @@ Both are two-step flows, so a match or review is saved only if your agent comple
 ## How do I ask my agent what I have in the tracker?
 
 Ask in plain words — "what's open?", "which Acme jobs haven't I applied to?", "what's due this week?" — and the agent calls **list_jobs**. Each job comes back as one line: id, title and company, status, applied and due dates, location, source, match score and where the job came from (the web app, a token name, the in-app chat, or a board scan). The agent can narrow by status, company, location, tag, applied flag, match score, origin and date ranges, and sort by created, applied or due date. A page is 25 jobs by default and at most 100; when more match, the agent gets a cursor for the next page. Once it has an id, **get_job** returns the whole record.
+
+When you remember a job by name rather than by link — "the staff platform role at Northwind" — the agent uses **search_jobs**, which looks for the words in each job's title, company, description and notes and takes every filter list_jobs does. This is also how a repost is caught: a posting that comes back under a new URL is invisible to **find_job**, which checks the exact link, but search_jobs finds the earlier copy by title and company. Give the agent a URL and it uses find_job; give it words and it uses search_jobs.
 
 Two things stay hidden here exactly as they are in the app. Dismissed board discoveries do not appear unless the agent asks for them by discovery status, and a match score the app shows as unanalyzed is not shown or filterable, so an agent never learns more from these tools than you can see yourself.
 
