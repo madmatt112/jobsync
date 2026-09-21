@@ -3,6 +3,9 @@ import { MCP_TOOL_DESCRIPTIONS } from '../../src/lib/mcp/toolDescriptions';
 import {
   McpAddJobInputShape,
   McpFindJobInputShape,
+  McpGetJobInputShape,
+  McpListJobsInputShape,
+  McpSearchJobsInputShape,
   McpUpdateJobInputShape,
   McpAddQuestionInputShape,
   McpSaveMatchResultInputShape,
@@ -18,6 +21,9 @@ import {
 const SHAPES: Record<string, z.ZodRawShape> = {
   add_job: McpAddJobInputShape,
   find_job: McpFindJobInputShape,
+  get_job: McpGetJobInputShape,
+  list_jobs: McpListJobsInputShape,
+  search_jobs: McpSearchJobsInputShape,
   update_job: McpUpdateJobInputShape,
   add_question: McpAddQuestionInputShape,
   save_match_result: McpSaveMatchResultInputShape,

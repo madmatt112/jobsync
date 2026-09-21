@@ -40,3 +40,11 @@ export async function resolveMcpToken(req: Request): Promise<AuthSuccess | AuthF
   }
   return { ok: true, userId: record.userId, scopes, tokenName: record.name };
 }
+
+// Read tools accept either scope. `jobs:read` is issued on new tokens, but
+// tokens minted before it existed carry only `jobs:write` and must keep
+// working without a re-issue — the same reason review_resume ships without a
+// `resume:write` gate (see route.ts). Design D5 of spec mcp-read-tools.
+export function hasJobReadScope(scopes: string[]): boolean {
+  return scopes.includes("jobs:read") || scopes.includes("jobs:write");
+}

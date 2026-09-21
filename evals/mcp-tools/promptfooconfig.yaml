@@ -135,3 +135,31 @@ tests:
     assert:
       - type: javascript
         value: file://./assertions.ts:assertRoutesToReviewResume
+
+  - description: Asking what is open - routes to list_jobs, not find_job
+    vars:
+      userMessage: >
+        What's open in my tracker right now? I want to see everything I haven't
+        heard back on yet.
+    assert:
+      - type: javascript
+        value: file://./assertions.ts:assertRoutesToListJobs
+
+  - description: Repost remembered by name - routes to search_jobs, not find_job
+    vars:
+      userMessage: >
+        I'm fairly sure I saved a Staff Platform Engineer role at Northwind Cloud
+        a few weeks ago, but the posting I'm looking at now has a different link.
+        Is it already in JobSync?
+    assert:
+      - type: javascript
+        value: file://./assertions.ts:assertRoutesToSearchJobs
+
+  - description: Exact URL check - still routes to find_job, not search_jobs
+    vars:
+      userMessage: >
+        Is https://northwindcloud.com/careers/staff-platform-engineer already in
+        my tracker?
+    assert:
+      - type: javascript
+        value: file://./assertions.ts:assertRoutesToFindJobForUrl
