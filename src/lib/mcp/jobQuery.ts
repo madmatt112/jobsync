@@ -181,13 +181,17 @@ export function decodeCursor(s: string): CursorPayload | null {
 
 // SQLite sorts NULL low: descending puts the null run last, ascending puts it
 // first. Each branch below continues from a cursor on either side of that
-// boundary, so a null-dated row is returned exactly once.
+// boundary, so a null-dated row is returned exactly once. createdAt is never
+// null and Prisma refuses a null filter on a non-nullable column, so that
+// arm is left out for it — the null-cursor branches can't be reached there.
 function keysetClause(column: (typeof SORT_COLUMN)[JobSortField], c: CursorPayload): Prisma.JobWhereInput {
   const v = c.v === null ? null : new Date(c.v);
+  const nullable = column !== "createdAt";
   if (c.o === "desc") {
-    return v === null
-      ? { AND: [{ [column]: null }, { id: { lt: c.id } }] }
-      : { OR: [{ [column]: { lt: v } }, { [column]: v, id: { lt: c.id } }, { [column]: null }] };
+    if (v === null) return { AND: [{ [column]: null }, { id: { lt: c.id } }] };
+    const or: Prisma.JobWhereInput[] = [{ [column]: { lt: v } }, { [column]: v, id: { lt: c.id } }];
+    if (nullable) or.push({ [column]: null });
+    return { OR: or };
   }
   return v === null
     ? { OR: [{ [column]: null, id: { gt: c.id } }, { [column]: { not: null } }] }

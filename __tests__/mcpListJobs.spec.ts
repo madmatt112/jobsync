@@ -223,13 +223,13 @@ describe("handleListJobs", () => {
       vi.clearAllMocks();
       const page2 = await list({ cursor }, rows(3), 40);
 
+      // createdAt is non-nullable: no null arm, or Prisma rejects the filter.
       expect(whereOf().AND).toEqual(
         expect.arrayContaining([
           {
             OR: [
               { createdAt: { lt: last.createdAt } },
               { createdAt: last.createdAt, id: { lt: last.id } },
-              { createdAt: null },
             ],
           },
         ]),
@@ -237,6 +237,25 @@ describe("handleListJobs", () => {
       // The count is over the base filters, not the keyset remainder.
       expect((prisma.job.count as any).mock.calls[0][0].where.AND).toEqual([DISMISSED_CLAUSE]);
       expect(page2).toContain("showing rows 26-28");
+    });
+
+    it("continues descending from a dated row into the null run on a nullable column", async () => {
+      const v = new Date("2026-09-05T00:00:00Z");
+      const cursor = encodeCursor({
+        v: v.toISOString(),
+        id: "job-010",
+        s: "applied",
+        o: "desc",
+        f: fingerprint({}),
+        n: 26,
+      });
+      await list({ sortBy: "applied", cursor }, rows(2), 30);
+
+      expect(whereOf().AND).toEqual(
+        expect.arrayContaining([
+          { OR: [{ appliedDate: { lt: v } }, { appliedDate: v, id: { lt: "job-010" } }, { appliedDate: null }] },
+        ]),
+      );
     });
 
     it("walks into and through the null run when sorting descending", async () => {
