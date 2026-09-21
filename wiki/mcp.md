@@ -3,7 +3,7 @@ type: how-to
 title: MCP Access
 description: Connecting an external AI agent such as Claude Desktop to JobSync over MCP — generating a token, adding the connector, the tools an agent gets, and the limits.
 feature: mcp
-tags: [mcp, claude desktop, agent, connector, personal access token, integration, add job from chat, mcp-remote, streamable-http, token, revoke]
+tags: [mcp, claude desktop, agent, connector, personal access token, integration, add job from chat, read jobs from chat, mcp-remote, streamable-http, token, revoke]
 aliases: [model context protocol, connect claude, claude desktop integration, api token, personal access token, agent access, external agent]
 status: stable
 stale_after: 2027-09-02
@@ -13,7 +13,7 @@ stale_after: 2027-09-02
 
 ## What can an AI agent do with JobSync over MCP?
 
-It can add and correct jobs, add Question Bank entries, and save a job-match or resume review that it produced itself. JobSync runs a built-in MCP (Model Context Protocol) server, so a chat client such as Claude Desktop can write to your tracker without you switching to the app — paste a posting into your agent and ask it to add the job, and the company, title, location, source and tags resolve against your existing lists.
+It can add and correct jobs, read back any job you have saved, add Question Bank entries, and save a job-match or resume review that it produced itself. JobSync runs a built-in MCP (Model Context Protocol) server, so a chat client such as Claude Desktop can write to your tracker without you switching to the app — paste a posting into your agent and ask it to add the job, and the company, title, location, source and tags resolve against your existing lists.
 
 Two things stay in your control. Every connection needs a personal access token you generate yourself, and each token is named — jobs it creates carry that name as their source, and an agent can only edit jobs that were created through MCP in the first place. Nothing an agent does can overwrite a job you curated in the app.
 
@@ -71,17 +71,18 @@ Both snippets are shown in the token dialog with your real URL and token already
 
 ## Which tools does a connected agent get?
 
-Nine, all of them writes to your own data:
+Ten. Nine of them write to your own data and one reads it back:
 
 - **add_job** — adds a job, resolving or creating company, title, location, source and tags by name, and reporting back what it matched versus created.
 - **add_jobs_batch** — the same thing for up to 10 jobs in one call, for a scheduled run.
 - **find_job** — checks by URL whether a posting is already saved, before adding it again.
+- **get_job** — reads one saved job in full by its id: every field, the company, location and source, tags, notes, the stage timeline with interviewers, linked contacts, and the match analysis. It changes nothing.
 - **update_job** — corrects or enriches a job that was added through MCP. Only the fields supplied change.
 - **add_question** — adds an entry to your Question Bank, with tags resolved the same way.
 - **review_resume** / **save_resume_review** — hands the agent your default resume and reviewing instructions, then stores the review it writes.
 - **save_match_result** / **save_match_results_batch** — stores a job-fit analysis the agent produced after adding a job.
 
-Tokens are issued with the scopes needed for all of these, so there is nothing to configure per tool.
+Tokens are issued with the scopes needed for all of these, so there is nothing to configure per tool. Reading uses the `jobs:read` scope, which every new token carries; a token generated before that scope existed still carries `jobs:write`, and that is accepted for reads too, so nothing has to be re-issued.
 
 ## How do I get a job match or resume review from my agent?
 
