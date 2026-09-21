@@ -37,6 +37,8 @@ export interface JobReadFilters {
   dueTo?: Date;
   sortBy?: JobSortField;
   sortOrder?: JobSortOrder;
+  // search_jobs only: words matched against title, company, description and notes
+  query?: string;
 }
 
 export interface JobReadInput extends JobReadFilters {
@@ -124,6 +126,19 @@ export function buildJobWhere(userId: string, f: JobReadFilters): Prisma.JobWher
   if (applied) where.appliedDate = applied;
   if (due) where.dueDate = due;
 
+  // Free text over the four fields the requirement names. Location and source
+  // are searchable in the app's own box but have their own filters here.
+  if (f.query) {
+    and.push({
+      OR: [
+        { JobTitle: { label: { contains: f.query } } },
+        { Company: { label: { contains: f.query } } },
+        { description: { contains: f.query } },
+        { Notes: { some: { content: { contains: f.query } } } },
+      ],
+    });
+  }
+
   return where;
 }
 
@@ -141,11 +156,11 @@ interface CursorPayload {
 // Effective sort is part of the payload and compared directly, so it stays out
 // of the fingerprint: an explicit default and an omitted one page the same way.
 // limit and cursor are excluded too, so page size may change mid-walk.
-export function fingerprint(f: JobReadFilters & { query?: string }): string {
+export function fingerprint(f: JobReadFilters): string {
   const entries: [string, unknown][] = [];
   const norm = (v: unknown) =>
     v instanceof Date ? v.getTime() : typeof v === "string" ? v.trim().toLowerCase() : v;
-  const keys: (keyof (JobReadFilters & { query?: string }))[] = [
+  const keys: (keyof JobReadFilters)[] = [
     "status", "company", "location", "applied", "tag", "createdVia", "origin",
     "discoveryStatus", "matchScoreMin", "matchScoreMax", "createdFrom", "createdTo",
     "appliedFrom", "appliedTo", "dueFrom", "dueTo", "query",
@@ -222,11 +237,7 @@ export type JobQueryResult =
   | { ok: true; rows: JobRow[]; total: number; nextCursor: string | null; from: number; sortBy: JobSortField; sortOrder: JobSortOrder }
   | { ok: false; error: string };
 
-export async function runJobQuery(
-  userId: string,
-  input: JobReadInput & { query?: string },
-  extraWhere?: Prisma.JobWhereInput,
-): Promise<JobQueryResult> {
+export async function runJobQuery(userId: string, input: JobReadInput): Promise<JobQueryResult> {
   const sortBy = input.sortBy ?? "created";
   const sortOrder = input.sortOrder ?? "desc";
   const limit = input.limit ?? APP_CONSTANTS.RECORDS_PER_PAGE;
@@ -250,7 +261,6 @@ export async function runJobQuery(
   }
 
   const base = buildJobWhere(userId, input);
-  if (extraWhere) (base.AND as Prisma.JobWhereInput[]).push(extraWhere);
   const pageWhere: Prisma.JobWhereInput = cursor
     ? { ...base, AND: [...(base.AND as Prisma.JobWhereInput[]), keysetClause(column, cursor)] }
     : base;

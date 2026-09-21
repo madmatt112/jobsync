@@ -225,6 +225,21 @@ export const McpListJobsSchema = z.object({
 });
 export type McpListJobsInput = z.infer<typeof McpListJobsSchema>;
 
+// search_jobs — list_jobs plus a required free-text query. query comes first
+// so it leads the advertised schema.
+export const McpSearchJobsInputShape = {
+  query: z
+    .string()
+    .min(1, "query is required")
+    .describe("Words to find in a job's title, company, description or notes (case-insensitive for ASCII). Not a URL — use find_job for that."),
+  ...McpListJobsInputShape,
+};
+
+export const McpSearchJobsSchema = McpListJobsSchema.extend({
+  query: McpSearchJobsInputShape.query,
+});
+export type McpSearchJobsInput = z.infer<typeof McpSearchJobsSchema>;
+
 // update_job — every field except jobId is optional; only supplied fields
 // change. Mirrors add_job's field names exactly.
 export const McpUpdateJobInputShape = {
