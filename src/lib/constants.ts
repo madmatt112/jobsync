@@ -8,6 +8,7 @@ import {
   Wrench,
   Zap,
   BookOpen,
+  CalendarCheck,
 } from "lucide-react";
 
 export const APP_CONSTANTS = {
@@ -17,6 +18,8 @@ export const APP_CONSTANTS = {
   ATS_COMPANY_PAGE_SIZE: 50,
   MAX_AUTOMATIONS_PER_USER: 10,
   MAX_JOB_TAGS: 10,
+  // Due date given to a new job when none is supplied, on every creation path
+  DEFAULT_JOB_DUE_DAYS: 3,
   MIN_QUESTION_LENGTH: 5,
   MAX_QUESTION_LENGTH: 500,
   MIN_QUESTION_ANSWER_LENGTH: 10,
@@ -54,8 +57,12 @@ export const APP_CONSTANTS = {
   // Paired so the rail width and its matching content offset can't drift.
   SIDEBAR_WIDTH: {
     expanded: { rail: "w-56", contentOffset: "sm:pl-56" },
-    collapsed: { rail: "w-14", contentOffset: "sm:pl-14" },
+    collapsed: { rail: "w-14", contentOffset: "sm:pl-14", px: 56 },
   },
+
+  // Cloud API-key verification timeout. Without it a black-holed TLS
+  // handshake (VPN MTU mismatch) leaves the Verify button spinning forever.
+  AI_VERIFY_TIMEOUT_MS: 10_000,
 
   // Ollama API timeouts
   AI_OLLAMA_LIST_TIMEOUT_MS: 5_000,
@@ -341,6 +348,15 @@ export const STAGE_OUTCOMES = [
   { label: "Cancelled", value: "cancelled" },
 ] as const;
 
+// Statuses you can only reach by applying: setting one marks the job applied.
+export const APPLIED_STATUS_VALUES: readonly string[] = [
+  "applied",
+  "interview",
+  "offer",
+  "offer-accepted",
+  "offer-declined",
+];
+
 // Zod's z.enum needs a non-empty tuple; JOB_STATUSES is the source of truth.
 export const JOB_STATUS_VALUES = JOB_STATUSES.map((s) => s.value) as unknown as [
   string,
@@ -375,6 +391,11 @@ export const SIDEBAR_LINKS = [
     icon: BriefcaseBusiness,
     route: "/dashboard/myjobs",
     label: "Jobs",
+  },
+  {
+    icon: CalendarCheck,
+    route: "/dashboard/interviews",
+    label: "Interviews",
   },
   {
     icon: Zap,

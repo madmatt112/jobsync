@@ -7,11 +7,20 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { StickyNote } from "lucide-react";
+import { Pencil, StickyNote, Trash } from "lucide-react";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { format } from "date-fns";
 import { useState } from "react";
-import { JobResponse, JobStatus } from "@/models/job.model";
+import {
+  JobResponse,
+  JobSortField,
+  JobStatus,
+  getJobTypeLabel,
+  getWorkplaceTypeLabel,
+} from "@/models/job.model";
+import type { SortState } from "@/models/sort.model";
+import { SortableTableHead } from "../SortableTableHead";
 import Link from "next/link";
 import { DeleteAlertDialog } from "../DeleteAlertDialog";
 import { CircularScore } from "@/components/CircularScore";
@@ -28,6 +37,8 @@ type MyJobsTableProps = {
   editJob: (id: string) => void;
   onChangeJobStatus: (id: string, status: JobStatus) => void;
   onAddNote: (jobId: string) => void;
+  sort: SortState<JobSortField> | null;
+  onSort: (field: JobSortField) => void;
 };
 
 function MyJobsTable({
@@ -37,6 +48,8 @@ function MyJobsTable({
   editJob,
   onChangeJobStatus,
   onAddNote,
+  sort,
+  onSort,
 }: MyJobsTableProps) {
   const [alertOpen, setAlertOpen] = useState(false);
   const [jobIdToDelete, setJobIdToDelete] = useState("");
@@ -54,13 +67,25 @@ function MyJobsTable({
             <TableHead className="hidden w-[100px] sm:table-cell">
               <span className="sr-only">Company Logo</span>
             </TableHead>
-            <TableHead className="hidden md:table-cell">Date Applied</TableHead>
-            <TableHead>Title</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead className="hidden md:table-cell">Location</TableHead>
+            <SortableTableHead field="appliedDate" sort={sort} onSort={onSort} className="hidden md:table-cell">
+              Applied
+            </SortableTableHead>
+            <SortableTableHead field="title" sort={sort} onSort={onSort}>
+              Title
+            </SortableTableHead>
+            <SortableTableHead field="company" sort={sort} onSort={onSort}>
+              Company
+            </SortableTableHead>
+            <SortableTableHead field="location" sort={sort} onSort={onSort} className="hidden md:table-cell">
+              Location
+            </SortableTableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden md:table-cell text-center">Match</TableHead>
-            <TableHead className="hidden md:table-cell">Source</TableHead>
+            <SortableTableHead field="matchScore" sort={sort} onSort={onSort} className="hidden md:table-cell text-center">
+              Match
+            </SortableTableHead>
+            <SortableTableHead field="source" sort={sort} onSort={onSort} className="hidden md:table-cell">
+              Source
+            </SortableTableHead>
             <TableHead>
               <span className="sr-only">Actions</span>
             </TableHead>
@@ -83,7 +108,7 @@ function MyJobsTable({
                   className="font-medium cursor-pointer max-w-[120px] md:max-w-[220px]"
                 >
                   <div className="flex items-center gap-1.5">
-                    <Link href={`/dashboard/myjobs/${job?.id}`} className="block truncate">
+                    <Link href={`/dashboard/myjobs/${job?.id}`} className="block truncate text-primary underline-offset-4 hover:underline">
                       {job.JobTitle?.label}
                     </Link>
                     {(job._count?.Notes ?? 0) > 0 && (
@@ -93,9 +118,26 @@ function MyJobsTable({
                       </Badge>
                     )}
                   </div>
+                  <span className="block truncate text-xs font-normal text-muted-foreground">
+                    {[
+                      getJobTypeLabel(job.jobType),
+                      job.workplaceType ? getWorkplaceTypeLabel(job.workplaceType) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
                 </TableCell>
                 <TableCell className="font-medium max-w-[100px] md:max-w-[160px]">
-                  <span className="block truncate">{job.Company?.label}</span>
+                  {job.Company?.id ? (
+                    <Link
+                      href={`/dashboard/admin/companies/${job.Company.id}`}
+                      className="block truncate text-teal-600 underline-offset-4 hover:underline"
+                    >
+                      {job.Company.label}
+                    </Link>
+                  ) : (
+                    <span className="block truncate">{job.Company?.label}</span>
+                  )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell whitespace-nowrap max-w-[120px]">
                   <span className="block truncate">{job.Location?.label}</span>
@@ -124,14 +166,33 @@ function MyJobsTable({
                   {job.JobSource?.label}
                 </TableCell>
                 <TableCell>
-                  <JobActionsMenu
-                    job={job}
-                    jobStatuses={jobStatuses}
-                    editJob={editJob}
-                    onChangeJobStatus={onChangeJobStatus}
-                    onAddNote={onAddNote}
-                    onDeleteJob={onDeleteJob}
-                  />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Edit Job"
+                      aria-label="Edit Job"
+                      onClick={() => editJob(job.id)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Delete Job"
+                      aria-label="Delete Job"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => onDeleteJob(job.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                    <JobActionsMenu
+                      job={job}
+                      jobStatuses={jobStatuses}
+                      onChangeJobStatus={onChangeJobStatus}
+                      onAddNote={onAddNote}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             );

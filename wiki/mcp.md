@@ -73,7 +73,7 @@ Both snippets are shown in the token dialog with your real URL and token already
 
 Twelve. Nine of them write to your own data and three read it back:
 
-- **add_job** — adds a job, resolving or creating company, title, location, source and tags by name, and reporting back what it matched versus created.
+- **add_job** — adds a job, resolving or creating company, title, location, source and tags by name, and reporting back what it matched versus created. If the agent sends no due date, the job gets one three days from today, the same as the Add Job form.
 - **add_jobs_batch** — the same thing for up to 10 jobs in one call, for a scheduled run.
 - **find_job** — checks by URL whether a posting is already saved, before adding it again.
 - **get_job** — reads one saved job in full by its id: every field, the company, location and source, tags, notes, the stage timeline with interviewers, linked contacts, and the match analysis. It changes nothing.

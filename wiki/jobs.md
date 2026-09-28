@@ -3,7 +3,7 @@ type: how-to
 title: Jobs
 description: Adding jobs by hand or by pasting a posting into AI chat, moving them through the status workflow, and finding, editing, exporting or deleting them.
 feature: jobs
-tags: [jobs, applications, add a job, status, applied, interview, offer, offer accepted, offer declined, rejected, csv, export, paste, filter, search, job details, tabs, notes, ai match, cover letter]
+tags: [jobs, applications, add a job, status, applied, interview, offer, offer accepted, offer declined, rejected, csv, export, paste, filter, search, sort, job details, tabs, notes, ai match, cover letter]
 aliases: [job tracker, application tracker, my jobs, job board, track an application, job list]
 status: stable
 stale_after: 2027-08-31
@@ -15,13 +15,13 @@ stale_after: 2027-08-31
 
 Open **Jobs** in the sidebar and click **Add Job** at the top-right of the Jobs card. Job Title, Company, Job Location and Job Source are the fields you must fill in — each is a combo box that either picks an existing entry or creates a new one as you type, and Location and Source come pre-selected with whatever you used on your last job.
 
-Job Type, Workplace Type, Status, Due Date and Job Description are required too, but the form opens with them already set — Job Type on its first option, Workplace Type on Onsite, Status on Draft, Due Date three days from today and Job Description the placeholder `N/A`. You can change any of them; you cannot clear them. Genuinely optional are Job URL, Salary Range, the Applied switch, Date Applied, a resume and cover letter to attach, and skills. Salary Range is free text: pick one of the 10,000-wide suggestions from `Under 50,000` to `300,000+`, or type your own — `$120k – $150k`, `Negotiable` — and it is saved exactly as typed and shown on the job's details page.
+Job Type, Workplace Type, Status, Due Date and Job Description are required too, but the form opens with them already set — Job Type on its first option, Workplace Type on Onsite, Status on Draft, Due Date three days from today and Job Description the placeholder `N/A`. You can change any of them; you cannot clear them. Genuinely optional are Job URL, Salary Range, Date Applied, a resume and cover letter to attach, and skills. Salary Range is free text: pick one of the 10,000-wide suggestions from `Under 50,000` to `300,000+`, or type your own — `$120k – $150k`, `Negotiable` — and it is saved exactly as typed and shown on the job's details page.
 
 Paste the full posting text into Job Description if you have it. The AI features — resume review, job match and cover letter generation — read that field, and a job saved with only a title and a salary gives them almost nothing to work from.
 
 ## How do I add a job by pasting a posting into AI chat?
 
-Click **Chat AI** in the header to open the assistant panel, paste the full text of a job posting into the message box, and send it. The assistant extracts the title, company, location and description and shows you an approval card with exactly what it found. Nothing is saved to your tracker until you approve that card, and you can edit the details before you do.
+Click **Chat AI** in the header to open the assistant panel, paste the full text of a job posting into the message box, and send it. The assistant extracts the title, company, location and description and shows you an approval card with exactly what it found. Nothing is saved to your tracker until you approve that card, and you can edit the details before you do. Unless the posting or your message gives a deadline, the job is saved with a due date three days from today, the same as the Add Job form.
 
 This requires an AI provider and model to be set under **Settings → AI Provider**; without them the panel tells you so instead of starting. A long paste is attached as a chip rather than inlined into the message — that is expected, and the full text still reaches the extraction.
 
@@ -31,13 +31,20 @@ A job carries exactly one status from: **New**, **Draft**, **Applied**, **Interv
 
 A job's status now follows its [timeline](./timeline.md): it is whatever the job's current stage means, so changing the status also records a stage, and moving which stage is current also moves the status.
 
+A job counts as applied — on the dashboard, in the Jobs list's applied filter and in the CSV export — once its status reaches **Applied**, **Interview**, **Offer**, **Offer Accepted** or **Offer Declined**, or once it has a Date Applied, whichever way you set it: a status menu, the Add or Edit Job form, a timeline stage or the MCP tools. It stays applied if the status later moves to Rejected, Withdrawn or anything else. Choosing **Applied** fills in today's Date Applied when the job has none; Interview and the Offer statuses leave the date for you, so an application you are logging late isn't counted as sent today. Until it has a date, such a job shows as *Applied* without one and is left out of the dashboard's dated counts and charts. An existing Date Applied is never overwritten. In the form, picking a Date Applied on a Draft or New job moves its status to Applied.
+
+To take back an application logged by mistake:
+
+1. On the job's **Timeline** tab, [delete](./timeline.md#how-do-i-delete-a-stage) every Applied, Interview or Offer stage. If one of them was the current stage, the status moves back to the stage before it, such as Draft.
+2. Open **Edit**, clear Date Applied (click the selected day again), check the status is one such as Draft and save.
+
 ## How do I change a job's status?
 
-There are two ways. In the Jobs list, click a row's status badge and pick the new status from the menu. Or open the job and use the **Update Status** button at the top-right of the job details, choosing **Change status**. Either menu lists every status with the current one greyed out, and the change saves immediately — there is no separate save step.
+There are three ways. In the Jobs list, click a row's status badge and pick the new status from the menu, or use the row's **⋮** menu and choose **Change status**. Or open the job and use the **Update Status** button at the top-right of the job details, choosing **Change status**. Every one of these menus lists every status with the current one greyed out, and the change saves immediately — there is no separate save step.
 
 The Add Job dialog also has a Status field, so a status can be set when you first create the job or from **Edit Job** later.
 
-All three of those paths also append a stage to the job's [timeline](./timeline.md), so the history stays in step with the label. Picking a status the job already holds adds nothing.
+All four of those paths also append a stage to the job's [timeline](./timeline.md), so the history stays in step with the label. Picking a status the job already holds adds nothing.
 
 ## What is on a job's details page?
 
@@ -51,9 +58,13 @@ The tabs are **Description**, **[Timeline](./timeline.md)**, **AI Match**, **Cov
 
 Notes live on the **Notes** tab: **New Note** there adds one, and each note can be edited or deleted from its own card. **Add a Note** in the **⋮** menu is a shortcut to the same thing from anywhere on the page — it switches to the Notes tab and opens the editor.
 
+You can also act from the Jobs list without opening the job: each row has **Edit** and **Delete** icons, and its **⋮** menu has **View Details** and **Add a Note**.
+
 ## How do I find a job in a long list?
 
-The Jobs card header has three tools. The **search box** matches on job text. The **filter dropdown** narrows to a preset: All (Except Dismissed), Applied, Interview, Draft, Rejected, Part-time, Accepted (discovered) or Dismissed (discovered). Clicking a company, title, location or source anywhere in the list adds it as a filter chip next to the search box — click the chip's **×** to clear it.
+The Jobs card header has three tools. The **search box** matches on job text. The **filter dropdown** narrows to a preset: All (Except Dismissed), Applied, Interview, Draft, Rejected, Part-time, Accepted (discovered) or Dismissed (discovered). Opening the list from a job count in **Library → Companies**, **Job Titles**, **Locations** or **Sources** narrows it to that entry and shows it as a filter chip next to the search box — click the chip's **×** to clear it.
+
+In table view, click a column header — **Applied**, **Title**, **Company**, **Location**, **Match** or **Source** — to sort the whole list, not just the rows loaded so far. The first click puts the most useful end first (newest dates and highest match scores first; names A→Z), a second click reverses it, and a third returns to the default order, newest added first. Jobs with nothing in that column always stay at the bottom, and a discovered job that hasn't been AI-matched yet sorts with the unmatched ones. Status isn't sortable — use the filter dropdown instead. The sort resets when you leave the page; card view keeps whatever order the table is sorted in. On a narrow screen only the columns you can see can be clicked.
 
 The list also has a view toggle for table or card layout, and a reload button that refetches without a full page refresh.
 
