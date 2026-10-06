@@ -18,6 +18,8 @@
 
 JobSync is a free, open-source companion for your job search: track applications, manage and export resumes, and ask a built-in AI assistant to review a resume, match it against a job, write a cover letter, or add a job from a posting you paste in — all self-hosted on your own server, so your data stays under your control. AI features can run entirely locally via Ollama or through your choice of cloud provider, and JobSync's built-in MCP server lets AI agents like Claude Desktop add jobs and interview questions straight from your chat.
 
+> **Hard fork.** This repository is a hard fork of [Gsync/jobsync](https://github.com/Gsync/jobsync), diverged at version `1.1.21` on **2026-10-06**. It does not track upstream and will not be merged back. It adds MCP read tools (`get_job`, `list_jobs`, `search_jobs`) and a configurable MCP rate limit (`MCP_RATE_LIMIT_MAX`), and it carries the MCP work forward independently. File issues and PRs against this repository. Released under the same MIT license as upstream.
+
 ![App Snapshot](./screenshots/jobsync-dashboard.png?raw=true "Jobsync dashboard")
 
 ## Key Features
