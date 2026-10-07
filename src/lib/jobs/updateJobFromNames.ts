@@ -52,9 +52,8 @@ export interface UpdateJobFromNamesResult {
   message: string;
 }
 
-const NOT_FOUND_MESSAGE =
-  "Job not found, not owned by this token's user, or not eligible for " +
-  "updates via MCP (only jobs created through MCP can be updated).";
+export const JOB_NOT_FOUND_MESSAGE =
+  "Job not found or not owned by this token's user.";
 
 export async function updateJobFromNames(
   input: UpdateJobFromNamesInput,
@@ -62,10 +61,10 @@ export async function updateJobFromNames(
 ): Promise<UpdateJobFromNamesResult> {
   const { jobId } = input;
 
-  // Ownership + eligibility gate, identical to the update `where` below, so a
-  // caller learns "not found" before any entity is created as a side effect.
+  // Ownership gate, identical to the update `where` below, so a caller learns
+  // "not found" before any entity is created as a side effect.
   const existing = await prisma.job.findFirst({
-    where: { id: jobId, userId, createdVia: { not: null } },
+    where: { id: jobId, userId },
     select: { id: true, descriptionCompleteness: true, appliedDate: true },
   });
   if (!existing) {
@@ -75,7 +74,7 @@ export async function updateJobFromNames(
       descriptionChanged: false,
       descriptionCompleteness: null,
       resolutions: [],
-      message: NOT_FOUND_MESSAGE,
+      message: JOB_NOT_FOUND_MESSAGE,
     };
   }
 
@@ -188,7 +187,7 @@ export async function updateJobFromNames(
         await appendStatusStage(tx, jobId, statusId, stageTypeId, userId);
       }
       await tx.job.update({
-        where: { id: jobId, userId, createdVia: { not: null } },
+        where: { id: jobId, userId },
         data,
       });
     });
@@ -200,7 +199,7 @@ export async function updateJobFromNames(
         descriptionChanged: false,
         descriptionCompleteness,
         resolutions,
-        message: NOT_FOUND_MESSAGE,
+        message: JOB_NOT_FOUND_MESSAGE,
       };
     }
     throw error;

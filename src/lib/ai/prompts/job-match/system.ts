@@ -48,6 +48,9 @@ ATS view only: important JD keywords found, key keywords missing, and exact phra
 
 ## Deal Breakers
 Critical missing requirements that may disqualify (mandatory certifications, licenses, etc.). If none, say so.
+Always check eligibility here: location or residency, work authorization, language, and security clearance. Name each one the job requires that the resume does not show.
+Use only the resume and the job description. Do not invent employers, skills, titles, dates or credentials that are not in them.
+If the job description is thin or cut short, say so here, call the score provisional, and name what the description leaves out. If you have a tool that can fetch the full posting and update the job, such as update_job, use it first and score the fuller description.
 
 ## Tailoring Tips
 A short list of specific resume changes, each naming the section and the change.

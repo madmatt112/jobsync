@@ -11,6 +11,7 @@ import {
   McpSaveMatchResultInputShape,
   McpAddJobsBatchInputShape,
   McpSaveMatchResultsBatchInputShape,
+  McpSaveCoverLetterInputShape,
   McpReviewResumeInputShape,
   McpSaveResumeReviewInputShape,
 } from '../../src/models/mcp.schema';
@@ -29,6 +30,7 @@ const SHAPES: Record<string, z.ZodRawShape> = {
   save_match_result: McpSaveMatchResultInputShape,
   add_jobs_batch: McpAddJobsBatchInputShape,
   save_match_results_batch: McpSaveMatchResultsBatchInputShape,
+  save_cover_letter: McpSaveCoverLetterInputShape,
   review_resume: McpReviewResumeInputShape,
   save_resume_review: McpSaveResumeReviewInputShape,
 };

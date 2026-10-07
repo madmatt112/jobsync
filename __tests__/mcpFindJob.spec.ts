@@ -101,7 +101,7 @@ describe("handleFindJob", () => {
     );
   });
 
-  it("says the job is not MCP-updatable when createdVia is null", async () => {
+  it("offers update_job, never a web-app refusal, when createdVia is null", async () => {
     (findExistingJobByUrl as any).mockResolvedValue({
       id: "job-1",
       title: "Engineer",
@@ -117,8 +117,10 @@ describe("handleFindJob", () => {
     });
 
     const result = await handleFindJob({ jobUrl: url }, "user-1");
+    const text = result.content[0].text;
 
-    expect(result.content[0].text).toContain("cannot be updated via MCP");
+    expect(text).toContain('Call update_job with jobId "job-1"');
+    expect(text).not.toContain("cannot be updated via MCP");
   });
 
   it("short-circuits when rate limited", async () => {

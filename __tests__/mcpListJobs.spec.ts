@@ -1,6 +1,7 @@
 import { handleListJobs } from "@/lib/mcp/tools/listJobs";
 import { decodeCursor, encodeCursor, fingerprint } from "@/lib/mcp/jobQuery";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
+import { MCP_TOOL_DESCRIPTIONS } from "@/lib/mcp/toolDescriptions";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -97,7 +98,25 @@ describe("handleListJobs", () => {
     );
 
     expect(text.split("\n")[1]).toBe(
-      "job-abc | Engineer @ Acme | applied | applied 2026-09-03 | due 2026-09-30 | Calgary | via LinkedIn | match 78% | mcp (claude-desktop)",
+      "job-abc | Engineer @ Acme | applied | applied 2026-09-03 | due 2026-09-30 | Calgary | via LinkedIn | match 78% | mcp (claude-desktop) | added 2026-09-01",
+    );
+  });
+
+  it("appends the date added as the tenth field, using the first ten characters of the ISO date even late in the UTC day", async () => {
+    const text = await list(
+      {},
+      [
+        row({
+          id: "job-late",
+          createdAt: new Date("2026-09-01T23:30:00Z"),
+          matchScore: 78,
+          Status: { value: "applied" },
+        }),
+      ],
+    );
+
+    expect(text.split("\n")[1]).toBe(
+      "job-late | Engineer @ Acme | applied | applied - | due - | - | via - | match 78% | app | added 2026-09-01",
     );
   });
 
@@ -366,5 +385,9 @@ describe("handleListJobs", () => {
 
     expect(result.content[0].text).toContain("Rate limit exceeded");
     expect(prisma.job.findMany).not.toHaveBeenCalled();
+  });
+
+  it("describes list_jobs as carrying the date each row was added", () => {
+    expect(MCP_TOOL_DESCRIPTIONS.list_jobs).toMatch(/date[^.]*added|added[^.]*date/i);
   });
 });

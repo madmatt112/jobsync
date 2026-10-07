@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     contacts = [],
     contactRoles = [],
     jobStageTypes = [],
+    coverLetterIds = [],
   }: {
     jobIds?: string[];
     resumes?: string[];
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     contacts?: string[];
     contactRoles?: string[];
     jobStageTypes?: string[];
+    coverLetterIds?: string[];
   } = await req.json();
 
   // Delete automations before resumes: Automation.resumeId is a required FK, so
@@ -65,6 +67,14 @@ export async function POST(req: NextRequest) {
   // Library items), so those items become unused and eligible for deletion.
   for (const id of jobIds) {
     await prisma.job.deleteMany({ where: { id, userId } });
+  }
+  // Cover letters saved via MCP save_cover_letter. Deleted after the jobs
+  // above so the job -> coverLetter FK no longer references them, and scoped
+  // through the owning profile's user so a test only removes its own letters.
+  for (const id of coverLetterIds) {
+    await prisma.coverLetter.deleteMany({
+      where: { id, profile: { userId } },
+    });
   }
   for (const title of resumes) {
     const rows = await prisma.resume.findMany({

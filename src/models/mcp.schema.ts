@@ -99,13 +99,13 @@ export type McpAddQuestionInput = z.infer<typeof McpAddQuestionSchema>;
 
 // Raw input shape for MCP tool registration (no transforms needed)
 export const McpSaveMatchResultInputShape = {
-  jobId: z.string().min(1).describe("The id of the job returned by add_job."),
+  jobId: z.string().min(1).describe("The id of the job, as given in the match directive."),
   resumeId: z
     .string()
     .min(1)
     .optional()
     .describe(
-      "The id of the resume this match was scored against, exactly as given in the add_job directive. Omit only if the directive had none.",
+      "The id of the resume this match was scored against, exactly as given in the match directive. Omit only if the directive had none.",
     ),
   matchText: z.string().min(20).describe(
     "Your full match analysis: a leading 'SCORES: match=<0-100> recommendation=<strong|good|partial|weak>' line, then a markdown body.",
@@ -114,6 +114,26 @@ export const McpSaveMatchResultInputShape = {
 
 export const McpSaveMatchResultSchema = z.object(McpSaveMatchResultInputShape);
 export type McpSaveMatchResultInput = z.infer<typeof McpSaveMatchResultSchema>;
+
+// save_cover_letter — stores a letter on a job as a new version. jobId names
+// the job; text is the letter body. Each is required and non-empty.
+export const McpSaveCoverLetterInputShape = {
+  jobId: z
+    .string()
+    .min(1)
+    .describe(
+      "The id of the job to attach this cover letter to, as returned by add_job, find_job, list_jobs, search_jobs or get_job.",
+    ),
+  text: z
+    .string()
+    .min(1)
+    .describe(
+      "The full cover letter body. Markdown-formatted is supported; plain text also works. Stored as a new version, never overwriting an earlier one.",
+    ),
+};
+
+export const McpSaveCoverLetterSchema = z.object(McpSaveCoverLetterInputShape);
+export type McpSaveCoverLetterInput = z.infer<typeof McpSaveCoverLetterSchema>;
 
 // No arguments — always reviews the caller's default resume.
 export const McpReviewResumeInputShape = {};
@@ -163,6 +183,12 @@ export const McpGetJobInputShape = {
     .min(1, "jobId is required")
     .describe(
       "The id of a saved job, as returned by list_jobs, search_jobs, find_job or add_job. If you only have a posting URL, call find_job instead.",
+    ),
+  matchDirective: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, also returns a match directive so you can re-score this job without editing it. The read itself is unchanged.",
     ),
 };
 
@@ -247,7 +273,7 @@ export const McpUpdateJobInputShape = {
     .string()
     .min(1)
     .describe(
-      "The id of the job to update, as returned by add_job or find_job. Only jobs created through MCP can be updated.",
+      "The id of the job to update, as returned by add_job, find_job, list_jobs, search_jobs or get_job.",
     ),
   company: z.string().min(1).optional(),
   jobTitle: z.string().min(1).optional(),

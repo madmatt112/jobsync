@@ -4,6 +4,8 @@ import { originLabel } from "@/lib/mcp/jobQuery";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { hideUnanalyzedScore } from "@/actions/job/shared";
 import { STAGE_DETAIL_INCLUDE, sortStages } from "@/actions/jobStage/shared";
+import { buildMatchOffer, composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import type { DescriptionCompleteness } from "@/models/job.model";
 
 // The app's JOB_DETAILS_INCLUDE (src/actions/job/queries.ts) is private to a
 // "use server" module, so the graph is restated here with the one addition a
@@ -154,7 +156,7 @@ function renderDetail(job: JobDetail): string {
 }
 
 export async function handleGetJob(
-  input: { jobId: string },
+  input: { jobId: string; matchDirective?: boolean },
   userId: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
   const rateCheck = checkMcpRateLimit(userId);
@@ -175,7 +177,24 @@ export async function handleGetJob(
     if (!job) {
       return { content: [{ type: "text", text: "No job with that id." }] };
     }
-    return { content: [{ type: "text", text: renderDetail(job) }] };
+
+    const detail = renderDetail(job);
+    if (!input.matchDirective) {
+      return { content: [{ type: "text", text: detail }] };
+    }
+
+    // Re-score an owned job without editing it: the detail is unchanged and a
+    // match offer for the stored description is appended in the "rescore"
+    // context, composed exactly as add_job and update_job compose theirs.
+    const offer = await buildMatchOffer(
+      job.id,
+      userId,
+      job.descriptionCompleteness as DescriptionCompleteness | null,
+      "rescore",
+    );
+    return {
+      content: [{ type: "text", text: composeOfferMessage(detail, offer) }],
+    };
   } catch (err: any) {
     return {
       content: [{ type: "text", text: `Error: ${err?.message ?? "Unknown error"}` }],

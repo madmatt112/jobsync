@@ -1,11 +1,15 @@
 import { handleUpdateJob } from "@/lib/mcp/tools/updateJob";
-import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
+import {
+  updateJobFromNames,
+  JOB_NOT_FOUND_MESSAGE,
+} from "@/lib/jobs/updateJobFromNames";
 import { buildMatchOffer } from "@/lib/mcp/tools/matchDirective";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 
-vi.mock("@/lib/jobs/updateJobFromNames", () => ({
-  updateJobFromNames: vi.fn(),
-}));
+vi.mock("@/lib/jobs/updateJobFromNames", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return { ...actual, updateJobFromNames: vi.fn() };
+});
 
 vi.mock("@/lib/mcp/tools/matchDirective", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -73,7 +77,7 @@ describe("handleUpdateJob", () => {
       descriptionChanged: false,
       descriptionCompleteness: null,
       resolutions: [],
-      message: "Job not found, not owned by this token's user, or not eligible",
+      message: JOB_NOT_FOUND_MESSAGE,
     });
 
     const result = await handleUpdateJob(
@@ -81,7 +85,7 @@ describe("handleUpdateJob", () => {
       "user-1",
     );
 
-    expect(result.content[0].text).toContain("not found");
+    expect(result.content[0].text).toBe(JOB_NOT_FOUND_MESSAGE);
     expect(buildMatchOffer).not.toHaveBeenCalled();
   });
 

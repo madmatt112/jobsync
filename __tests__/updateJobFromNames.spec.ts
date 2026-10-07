@@ -1,4 +1,7 @@
-import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
+import {
+  updateJobFromNames,
+  JOB_NOT_FOUND_MESSAGE,
+} from "@/lib/jobs/updateJobFromNames";
 import {
   resolveCompany,
   resolveJobTitle,
@@ -71,21 +74,47 @@ describe("updateJobFromNames", () => {
     expect(prisma.job.update).not.toHaveBeenCalled();
   });
 
-  it("scopes the ownership lookup to userId and MCP-created jobs", async () => {
+  it("scopes the ownership lookup to userId only, with no createdVia condition", async () => {
     await updateJobFromNames({ jobId: "job-1", salaryRange: "$1" }, userId);
 
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
-      where: { id: "job-1", userId, createdVia: { not: null } },
+      where: { id: "job-1", userId },
       select: { id: true, descriptionCompleteness: true, appliedDate: true },
     });
   });
 
-  it("patches only the provided fields", async () => {
+  it("patches only the provided fields, with no createdVia in the update where", async () => {
     await updateJobFromNames({ jobId: "job-1", salaryRange: "$150k" }, userId);
 
     const call = (prisma.job.update as any).mock.calls[0][0];
-    expect(call.where).toEqual({ id: "job-1", userId, createdVia: { not: null } });
+    expect(call.where).toEqual({ id: "job-1", userId });
     expect(call.data).toEqual({ salaryRange: "$150k" });
+  });
+
+  it("updates a job whose createdVia is null, applying fields the same as a non-null job", async () => {
+    (prisma.job.findFirst as any).mockResolvedValue({
+      id: "job-1",
+      descriptionCompleteness: null,
+      createdVia: null,
+    });
+
+    const result = await updateJobFromNames(
+      { jobId: "job-1", salaryRange: "$150k" },
+      userId,
+    );
+
+    const call = (prisma.job.update as any).mock.calls[0][0];
+    expect(call.where).toEqual({ id: "job-1", userId });
+    expect(result.updated).toBe(true);
+  });
+
+  it("returns JOB_NOT_FOUND_MESSAGE with no MCP-eligibility mention for an id owned by another user or missing", async () => {
+    (prisma.job.findFirst as any).mockResolvedValue(null);
+
+    const result = await updateJobFromNames({ jobId: "job-x" }, userId);
+
+    expect(result.message).toBe(JOB_NOT_FOUND_MESSAGE);
+    expect(result.message).not.toContain("MCP");
   });
 
   it("re-renders the description and reclassifies completeness", async () => {
