@@ -1,5 +1,6 @@
 import { handleSaveMatchResult } from "@/lib/mcp/tools/saveMatchResult";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
+import { JOB_NOT_FOUND_MESSAGE } from "@/lib/jobs/updateJobFromNames";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -44,7 +45,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(prisma.job.update).toHaveBeenCalledWith({
-      where: { id: "job-1", userId: "user-1", createdVia: { not: null } },
+      where: { id: "job-1", userId: "user-1" },
       data: {
         matchScore: 78,
         matchData: expect.any(String),
@@ -81,7 +82,7 @@ describe("handleSaveMatchResult", () => {
     expect(prisma.job.update).not.toHaveBeenCalled();
   });
 
-  it("returns a not-found/not-eligible message on P2025 (non-owned or non-MCP-created job)", async () => {
+  it("returns the shared not-found message on P2025 (non-owned or missing job)", async () => {
     (prisma.job.update as any).mockRejectedValue({ code: "P2025" });
 
     const result = await handleSaveMatchResult(
@@ -90,9 +91,19 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    expect(result.content[0].text).toBe(
-      "Job not found, not owned by this token's user, or not eligible for a match via MCP.",
+    expect(result.content[0].text).toBe(JOB_NOT_FOUND_MESSAGE);
+  });
+
+  it("does not mention MCP eligibility in the P2025 not-found reply", async () => {
+    (prisma.job.update as any).mockRejectedValue({ code: "P2025" });
+
+    const result = await handleSaveMatchResult(
+      { jobId: "someone-elses-job", matchText: validMatchText },
+      "user-3",
+      "my-token",
     );
+
+    expect(result.content[0].text).not.toContain("MCP");
   });
 
   it("overwrites a prior match (last-write-wins, no pre-check)", async () => {
@@ -233,7 +244,7 @@ describe("handleSaveMatchResult", () => {
     expect(JSON.parse(data.matchData).descriptionCompleteness).toBe("partial");
   });
 
-  it("scopes the completeness lookup to the caller's MCP-created jobs", async () => {
+  it("scopes the completeness lookup to the caller's own jobs, with no createdVia filter", async () => {
     await handleSaveMatchResult(
       { jobId: "job-1", matchText: validMatchText },
       "user-1",
@@ -241,7 +252,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
-      where: { id: "job-1", userId: "user-1", createdVia: { not: null } },
+      where: { id: "job-1", userId: "user-1" },
       select: { descriptionCompleteness: true },
     });
   });
