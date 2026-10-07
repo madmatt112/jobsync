@@ -139,6 +139,7 @@ export async function createNewJob(
 // test, pass or fail, via the test-only cleanup API.
 export type CleanupRegistry = {
   job: (id: string) => void;
+  coverLetter: (id: string) => void;
   resume: (title: string) => void;
   task: (title: string) => void;
   question: (text: string) => void;
@@ -171,6 +172,7 @@ export const test = base.extend<Fixtures>({
   },
   cleanup: async ({ page }, use) => {
     const jobIds: string[] = [];
+    const coverLetterIds: string[] = [];
     const resumes: string[] = [];
     const tasks: string[] = [];
     const questions: string[] = [];
@@ -187,6 +189,7 @@ export const test = base.extend<Fixtures>({
     const jobStageTypes: string[] = [];
     await use({
       job: (id) => jobIds.push(id),
+      coverLetter: (id) => coverLetterIds.push(id),
       resume: (title) => resumes.push(title),
       task: (title) => tasks.push(title),
       question: (text) => questions.push(text),
@@ -207,6 +210,7 @@ export const test = base.extend<Fixtures>({
     const res = await page.request.post("/api/test/cleanup", {
       data: {
         jobIds,
+        coverLetterIds,
         resumes,
         tasks,
         questions,
