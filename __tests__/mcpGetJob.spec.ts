@@ -1,5 +1,6 @@
 import { handleGetJob } from "@/lib/mcp/tools/getJob";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
+import { buildMatchOffer } from "@/lib/mcp/tools/matchDirective";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -12,6 +13,14 @@ vi.mock("@prisma/client", () => {
 vi.mock("@/lib/mcp/rate-limit", () => ({
   checkMcpRateLimit: vi.fn(() => ({ allowed: true, resetIn: 0 })),
 }));
+
+// Same partial-module-mock pattern as __tests__/mcpUpdateJob.spec.ts:14-17 —
+// only buildMatchOffer is replaced, everything else (composeOfferMessage) is
+// the real implementation so the composition itself isn't mocked away.
+vi.mock("@/lib/mcp/tools/matchDirective", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return { ...actual, buildMatchOffer: vi.fn() };
+});
 
 // The smallest row the include graph can return: every optional relation
 // absent, every nullable scalar null.
@@ -253,5 +262,38 @@ describe("handleGetJob", () => {
 
     expect(result.content[0].text).toContain("Rate limit exceeded");
     expect(prisma.job.findFirst).not.toHaveBeenCalled();
+  });
+
+  describe("matchDirective flag (R8 AC4)", () => {
+    it("appends the offer builder's directive after the detail, with a blank line between", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(minimalJob());
+      (buildMatchOffer as any).mockResolvedValue({
+        kind: "directive",
+        text: "DIRECTIVE calling save_match_result",
+      });
+
+      const result = await handleGetJob(
+        { jobId: "job-1", matchDirective: true } as any,
+        "user-1",
+      );
+      const text = result.content[0].text;
+
+      expect(text.endsWith("\n\nDIRECTIVE calling save_match_result")).toBe(true);
+      expect(text).toContain("Job job-1");
+      // Folded in: R8 AC4's "one rate-limit check" — this assertion already
+      // holds pre-implementation (the handler checks the limit once
+      // regardless of the flag), so on its own it is RED-IMPOSSIBLE; it is
+      // carried here, in an otherwise-red test, rather than as its own case.
+      expect(checkMcpRateLimit).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks the offer builder for a rescore using the job's id, the caller and its completeness", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(minimalJob({ descriptionCompleteness: "partial" }));
+      (buildMatchOffer as any).mockResolvedValue({ kind: "note", text: "a note" });
+
+      await handleGetJob({ jobId: "job-1", matchDirective: true } as any, "user-1");
+
+      expect(buildMatchOffer).toHaveBeenCalledWith("job-1", "user-1", "partial", "rescore");
+    });
   });
 });
