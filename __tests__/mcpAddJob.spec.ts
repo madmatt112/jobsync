@@ -1,7 +1,9 @@
 import { handleAddJob } from "@/lib/mcp/tools/addJob";
 import { createJobFromNames } from "@/lib/jobs/createJobFromNames";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
-import { getDefaultResumeForUser } from "@/lib/jobs/getDefaultResumeForUser";
+import { resolveJobForAgent } from "@/lib/agent/jobLookup";
+import { resolveResumeForAgent } from "@/lib/agent/resumeLookup";
+import { preprocessJob } from "@/lib/ai/tools/preprocessing-job";
 import { preprocessResume } from "@/lib/ai/tools/preprocessing";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 
@@ -13,8 +15,16 @@ vi.mock("@/lib/jobs/updateJobFromNames", () => ({
   updateJobFromNames: vi.fn(),
 }));
 
-vi.mock("@/lib/jobs/getDefaultResumeForUser", () => ({
-  getDefaultResumeForUser: vi.fn(),
+vi.mock("@/lib/agent/jobLookup", () => ({
+  resolveJobForAgent: vi.fn(),
+}));
+
+vi.mock("@/lib/agent/resumeLookup", () => ({
+  resolveResumeForAgent: vi.fn(),
+}));
+
+vi.mock("@/lib/ai/tools/preprocessing-job", () => ({
+  preprocessJob: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/tools/preprocessing", () => ({
@@ -47,9 +57,17 @@ function mockCreated(completeness: string) {
 }
 
 function mockUsableResume() {
-  (getDefaultResumeForUser as any).mockResolvedValue({
-    id: "resume-1",
-    title: "My Resume",
+  (resolveJobForAgent as any).mockResolvedValue({
+    status: "ok",
+    job: { id: "job-1", resumeId: null },
+  });
+  (resolveResumeForAgent as any).mockResolvedValue({
+    status: "ok",
+    resume: { id: "resume-1", title: "My Resume" },
+  });
+  (preprocessJob as any).mockResolvedValue({
+    success: true,
+    data: { normalizedText: "NORMALIZED JOB TEXT", metadata: {}, isValid: true },
   });
   (preprocessResume as any).mockResolvedValue({
     success: true,
@@ -76,10 +94,10 @@ describe("handleAddJob match gating", () => {
     expect(text).toContain(
       "SCORES: match=<0-100> recommendation=<strong|good|partial|weak>",
     );
-    expect(text).toContain("## Overall Fit");
-    expect(text).toContain("## Key Strengths");
-    expect(text).toContain("## Gaps / Risks");
-    expect(text).toContain("## Recommendation");
+    expect(text).toContain("## Summary");
+    expect(text).toContain("## Requirements");
+    expect(text).toContain("## Skills");
+    expect(text).toContain("## Deal Breakers");
     expect(text).toContain('"resumeId": "resume-1"');
     expect(text).not.toContain("PARTIAL DESCRIPTION WARNING");
   });
@@ -127,12 +145,16 @@ describe("handleAddJob match gating", () => {
     expect(text).toContain("too thin to score");
     expect(text).toContain("update_job");
     expect(text).not.toContain("save_match_result");
-    expect(getDefaultResumeForUser).not.toHaveBeenCalled();
+    expect(resolveResumeForAgent).not.toHaveBeenCalled();
   });
 
   it("notes a missing default resume and still reports the job as created", async () => {
     mockCreated("full");
-    (getDefaultResumeForUser as any).mockResolvedValue(null);
+    (resolveJobForAgent as any).mockResolvedValue({
+      status: "ok",
+      job: { id: "job-1", resumeId: null },
+    });
+    (resolveResumeForAgent as any).mockResolvedValue({ status: "no_resumes" });
 
     const result = await handleAddJob(baseInput as any, "user-1", "my-token");
     const text = result.content[0].text;
@@ -144,7 +166,18 @@ describe("handleAddJob match gating", () => {
 
   it("notes an unusable default resume", async () => {
     mockCreated("full");
-    (getDefaultResumeForUser as any).mockResolvedValue({ id: "resume-1" });
+    (resolveJobForAgent as any).mockResolvedValue({
+      status: "ok",
+      job: { id: "job-1", resumeId: null },
+    });
+    (resolveResumeForAgent as any).mockResolvedValue({
+      status: "ok",
+      resume: { id: "resume-1" },
+    });
+    (preprocessJob as any).mockResolvedValue({
+      success: true,
+      data: { normalizedText: "NORMALIZED JOB TEXT", metadata: {}, isValid: true },
+    });
     (preprocessResume as any).mockResolvedValue({ success: false });
 
     const result = await handleAddJob(baseInput as any, "user-1", "my-token");
@@ -167,7 +200,7 @@ describe("handleAddJob match gating", () => {
 
     expect(text).toContain("Duplicate detected");
     expect(text).not.toContain("save_match_result");
-    expect(getDefaultResumeForUser).not.toHaveBeenCalled();
+    expect(resolveResumeForAgent).not.toHaveBeenCalled();
   });
 
   it("short-circuits when rate limited", async () => {
@@ -191,6 +224,14 @@ describe("handleAddJob upsert routing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (checkMcpRateLimit as any).mockReturnValue({ allowed: true, resetIn: 0 });
+    (resolveJobForAgent as any).mockResolvedValue({
+      status: "ok",
+      job: { id: "job-9", resumeId: null },
+    });
+    (preprocessJob as any).mockResolvedValue({
+      success: true,
+      data: { normalizedText: "NORMALIZED JOB TEXT", metadata: {}, isValid: true },
+    });
   });
 
   it("updates the existing job instead of duplicating when upsert is true", async () => {
