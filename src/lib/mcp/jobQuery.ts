@@ -320,6 +320,7 @@ export function formatJobRow(job: JobRow): string {
     `via ${sanitize(job.JobSource?.label)}`,
     `match ${match}`,
     sanitize(originLabel(job)),
+    `added ${day(job.createdAt)}`,
   ].join(" | ");
 }
 
