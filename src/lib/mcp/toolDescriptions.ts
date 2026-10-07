@@ -14,11 +14,11 @@ export const MCP_TOOL_DESCRIPTIONS = {
   search_jobs:
     "Find saved jobs by words in their title, company, description or notes — a role you remember by name, or a repost saved under a different URL. Same filters, sort and paging as list_jobs; same one-line rows. Read-only. With the exact posting URL, use find_job instead.",
   update_job:
-    "Correct or enrich a job previously added through MCP. Only the fields you supply change. Supplying a fuller jobDescription re-classifies the posting and requests a fresh match analysis — use this instead of re-adding with allowDuplicate.",
+    "Correct or enrich any job the user owns. Only the fields you supply change. Supplying a fuller jobDescription re-classifies the posting and requests a fresh match analysis — use this instead of re-adding with allowDuplicate.",
   add_question:
     "Add an entry to the Question Bank. Resolves or creates tags by name. Returns a transparency report of what was matched vs. created.",
   save_match_result:
-    "Persist a job-fit match analysis (produced by you, the agent) against a job previously created with add_job. Call this after add_job hands you a match directive.",
+    "Persist a job-fit match analysis (produced by you, the agent) against any job the user owns. Call this after add_job, update_job or get_job hands you a match directive.",
   add_jobs_batch:
     "Add several jobs in one call. Same per-item behaviour as add_job (including upsert and the match directive); returns one labelled result per item. Use this for scheduled runs instead of N sequential add_job calls.",
   save_match_results_batch:
