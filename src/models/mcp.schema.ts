@@ -115,6 +115,26 @@ export const McpSaveMatchResultInputShape = {
 export const McpSaveMatchResultSchema = z.object(McpSaveMatchResultInputShape);
 export type McpSaveMatchResultInput = z.infer<typeof McpSaveMatchResultSchema>;
 
+// save_cover_letter — stores a letter on a job as a new version. jobId names
+// the job; text is the letter body. Each is required and non-empty.
+export const McpSaveCoverLetterInputShape = {
+  jobId: z
+    .string()
+    .min(1)
+    .describe(
+      "The id of the job to attach this cover letter to, as returned by add_job, find_job, list_jobs, search_jobs or get_job.",
+    ),
+  text: z
+    .string()
+    .min(1)
+    .describe(
+      "The full cover letter body. Markdown-formatted is supported; plain text also works. Stored as a new version, never overwriting an earlier one.",
+    ),
+};
+
+export const McpSaveCoverLetterSchema = z.object(McpSaveCoverLetterInputShape);
+export type McpSaveCoverLetterInput = z.infer<typeof McpSaveCoverLetterSchema>;
+
 // No arguments — always reviews the caller's default resume.
 export const McpReviewResumeInputShape = {};
 
