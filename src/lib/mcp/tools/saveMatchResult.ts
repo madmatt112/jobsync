@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { McpSaveMatchResultSchema } from "@/models/mcp.schema";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
+import { JOB_NOT_FOUND_MESSAGE } from "@/lib/jobs/updateJobFromNames";
 import { parseJobMatch } from "@/lib/ai/jobMatch/parse";
 import type { JobMatchData } from "@/models/ai.schemas";
 import type { DescriptionCompleteness } from "@/models/job.model";
@@ -65,7 +66,7 @@ export async function handleSaveMatchResult(
   // Same scope as the update below, so a job the caller can't write to
   // never leaks its completeness through this read either.
   const job = await prisma.job.findFirst({
-    where: { id: input.jobId, userId, createdVia: { not: null } },
+    where: { id: input.jobId, userId },
     select: { descriptionCompleteness: true },
   });
 
@@ -85,7 +86,7 @@ export async function handleSaveMatchResult(
 
   try {
     await prisma.job.update({
-      where: { id: input.jobId, userId, createdVia: { not: null } },
+      where: { id: input.jobId, userId },
       data: {
         matchScore: parsed.scores.matchScore,
         matchData: JSON.stringify(matchData),
@@ -94,12 +95,7 @@ export async function handleSaveMatchResult(
   } catch (error: any) {
     if (error?.code === "P2025") {
       return {
-        content: [
-          {
-            type: "text",
-            text: "Job not found, not owned by this token's user, or not eligible for a match via MCP.",
-          },
-        ],
+        content: [{ type: "text", text: JOB_NOT_FOUND_MESSAGE }],
       };
     }
     return {
