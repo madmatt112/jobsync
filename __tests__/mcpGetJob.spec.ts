@@ -295,5 +295,17 @@ describe("handleGetJob", () => {
 
       expect(buildMatchOffer).toHaveBeenCalledWith("job-1", "user-1", "partial", "rescore");
     });
+
+    it("with the flag on but a missing job, returns the neutral not-found line and never builds an offer", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(null);
+
+      const result = await handleGetJob(
+        { jobId: "someone-elses", matchDirective: true } as any,
+        "user-1",
+      );
+
+      expect(result.content[0].text).toBe("No job with that id.");
+      expect(buildMatchOffer).toHaveBeenCalledTimes(0);
+    });
   });
 });
