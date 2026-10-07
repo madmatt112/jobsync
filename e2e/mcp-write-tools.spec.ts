@@ -117,7 +117,9 @@ async function seedDefaultMatchableResume(
   await expect(defaultBadge).toBeVisible({ timeout: 20000 });
 }
 
-function toolText(result: { content: unknown }): string {
+type ToolResult = Awaited<ReturnType<Client["callTool"]>>;
+
+function toolText(result: ToolResult): string {
   return (result.content as Array<{ type: string; text?: string }>)
     .map((c) => c.text ?? "")
     .join("\n");
