@@ -27,6 +27,8 @@ import {
   McpAddJobsBatchSchema,
   McpSaveMatchResultsBatchInputShape,
   McpSaveMatchResultsBatchSchema,
+  McpSaveCoverLetterInputShape,
+  McpSaveCoverLetterSchema,
 } from "@/models/mcp.schema";
 import { handleAddJob } from "@/lib/mcp/tools/addJob";
 import { handleAddQuestion } from "@/lib/mcp/tools/addQuestion";
@@ -40,6 +42,7 @@ import { handleSearchJobs } from "@/lib/mcp/tools/searchJobs";
 import { handleUpdateJob } from "@/lib/mcp/tools/updateJob";
 import { handleAddJobsBatch } from "@/lib/mcp/tools/addJobsBatch";
 import { handleSaveMatchResultsBatch } from "@/lib/mcp/tools/saveMatchResultsBatch";
+import { handleSaveCoverLetter } from "@/lib/mcp/tools/saveCoverLetter";
 
 function isMcpEnabled(): boolean {
   const env = process.env.MCP_ENABLED;
@@ -308,6 +311,29 @@ async function handler(req: Request): Promise<Response> {
         };
       }
       return handleSaveMatchResultsBatch(parsed.data, userId, tokenName);
+    },
+  );
+
+  server.tool(
+    "save_cover_letter",
+    MCP_TOOL_DESCRIPTIONS.save_cover_letter,
+    McpSaveCoverLetterInputShape,
+    async (rawInput) => {
+      if (!auth.scopes.includes("jobs:write")) {
+        return {
+          content: [
+            { type: "text" as const, text: "Insufficient scope. Required: jobs:write" },
+          ],
+        };
+      }
+      const parsed = McpSaveCoverLetterSchema.safeParse(rawInput);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map((i) => i.message).join("; ");
+        return {
+          content: [{ type: "text" as const, text: `Validation error: ${issues}` }],
+        };
+      }
+      return handleSaveCoverLetter(parsed.data, userId);
     },
   );
 

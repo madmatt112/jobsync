@@ -23,6 +23,8 @@ export const MCP_TOOL_DESCRIPTIONS = {
     "Add several jobs in one call. Same per-item behaviour as add_job (including upsert and the match directive); returns one labelled result per item. Use this for scheduled runs instead of N sequential add_job calls.",
   save_match_results_batch:
     "Persist several job-fit match analyses in one call. Same per-item behaviour as save_match_result; returns one labelled result per item.",
+  save_cover_letter:
+    "Save a cover letter you wrote yourself for a job the user owns. Send the full letter as Markdown. Each call stores a new version and points the job at it; earlier versions stay in the user's documents in Profile.",
   review_resume:
     "Fetch the user's default resume so you can review it. Returns the normalized resume text plus a directive — produce the review yourself, then call save_resume_review with the result.",
   save_resume_review:
