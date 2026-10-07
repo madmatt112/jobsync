@@ -253,15 +253,15 @@ describe("handleAddJob upsert routing", () => {
     expect(result.content[0].text).toContain("Duplicate detected");
   });
 
-  it("explains when the duplicate is a web-app job that MCP cannot update", async () => {
+  it("patches the duplicate when it is an owned job the caller didn't add through MCP", async () => {
     (createJobFromNames as any).mockResolvedValue(duplicateResult);
     (updateJobFromNames as any).mockResolvedValue({
-      updated: false,
+      updated: true,
       jobId: "job-9",
       descriptionChanged: false,
       descriptionCompleteness: null,
       resolutions: [],
-      message: "Job not found, not owned by this token's user, or not eligible",
+      message: "Job job-9 updated.",
     });
 
     const result = await handleAddJob(
@@ -270,6 +270,7 @@ describe("handleAddJob upsert routing", () => {
       "my-token",
     );
 
-    expect(result.content[0].text).toContain("not eligible");
+    expect(result.content[0].text).toContain("Job job-9 updated.");
+    expect(result.content[0].text).not.toContain("not eligible");
   });
 });
