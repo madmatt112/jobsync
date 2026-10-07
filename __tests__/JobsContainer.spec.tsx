@@ -535,7 +535,7 @@ describe("JobsContainer Search Functionality", () => {
       });
 
       const noneOption = screen.getByRole("option", {
-        name: "All (Except Dismissed)",
+        name: "All (Except Dismissed & Expired)",
       });
       await act(async () => {
         await user.click(noneOption);
@@ -544,6 +544,34 @@ describe("JobsContainer Search Functionality", () => {
       // Filter should be cleared but search preserved
       await waitFor(() => {
         expect(getJobsList).toHaveBeenCalledWith(1, 25, undefined, "Developer", undefined, undefined, undefined, undefined, undefined, undefined);
+      });
+    });
+
+    it("should request only expired jobs when selecting the Expired filter", async () => {
+      (getJobsList as any).mockResolvedValue({
+        success: true,
+        data: mockJobs,
+        total: 2,
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(getJobsList).toHaveBeenCalledTimes(1);
+      });
+
+      const filterTrigger = screen.getByRole("combobox");
+      await act(async () => {
+        await user.click(filterTrigger);
+      });
+
+      const expiredOption = screen.getByRole("option", { name: "Expired" });
+      await act(async () => {
+        await user.click(expiredOption);
+      });
+
+      await waitFor(() => {
+        expect(getJobsList).toHaveBeenCalledWith(1, 25, "expired", undefined, undefined, undefined, undefined, undefined, undefined, undefined);
       });
     });
   });
