@@ -184,6 +184,12 @@ export const McpGetJobInputShape = {
     .describe(
       "The id of a saved job, as returned by list_jobs, search_jobs, find_job or add_job. If you only have a posting URL, call find_job instead.",
     ),
+  matchDirective: z
+    .boolean()
+    .optional()
+    .describe(
+      "When true, also returns a match directive so you can re-score this job without editing it. The read itself is unchanged.",
+    ),
 };
 
 export const McpGetJobSchema = z.object(McpGetJobInputShape);

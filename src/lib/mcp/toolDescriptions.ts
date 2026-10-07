@@ -8,7 +8,7 @@ export const MCP_TOOL_DESCRIPTIONS = {
   find_job:
     "Check whether one posting is already saved, by its exact URL. Call this before add_job when re-running a search. It answers 'is this URL saved?', not 'is anything like this saved?' — for that, or with no URL, use search_jobs. To add without a URL check, use add_job's upsert.",
   get_job:
-    "Read one saved job in full by id: every stored field, status, company, location, source, tags, notes, stage timeline, contacts, resume and cover-letter references, and the match analysis. Read-only. Use find_job when you only have a URL.",
+    "Read one saved job in full by id: every stored field, status, company, location, source, tags, notes, stage timeline, contacts, resume and cover-letter references, and the match analysis. Read-only. Use find_job when you only have a URL. With matchDirective: true, the reply also carries a match directive so you can re-score the job without editing it.",
   list_jobs:
     "List the user's saved jobs, newest first, one compact line each, with a cursor for the next page. Each line ends with the date the job was added. Filter by status, company, location, applied, tag, origin, match score or date ranges; sort by created, applied or due date. Read-only. Use this for 'what do I have', 'what's open', 'what's due' — not for looking up one posting by URL (find_job).",
   search_jobs:
