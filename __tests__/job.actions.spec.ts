@@ -321,9 +321,10 @@ describe("jobActions", () => {
         const [valuedCall, blankCall] = (prisma.job.findMany as any).mock.calls;
         expect(valuedCall[0].orderBy).toEqual([{ matchScore: "desc" }, ...BASE]);
         expect(blankCall[0].orderBy).toEqual(BASE);
-        // The dismissed-hiding AND survives, with the partition appended.
-        expect(valuedCall[0].where.AND).toHaveLength(2);
-        expect(valuedCall[0].where.AND[1]).toMatchObject({
+        // The dismissed- and expired-hiding ANDs survive, with the
+        // match-score partition appended after them.
+        expect(valuedCall[0].where.AND).toHaveLength(3);
+        expect(valuedCall[0].where.AND[2]).toMatchObject({
           matchScore: { not: null },
         });
       });
@@ -525,6 +526,36 @@ describe("jobActions", () => {
           userId: mockUser.id,
           jobType: "PT",
           OR: expect.any(Array),
+        });
+      });
+    });
+
+    describe("expired status hiding", () => {
+      beforeEach(() => {
+        (getCurrentUser as any).mockResolvedValue(mockUser);
+        (prisma.job.findMany as any).mockResolvedValue([]);
+        (prisma.job.count as any).mockResolvedValue(0);
+      });
+
+      it("hides expired jobs from the default (no filter) view", async () => {
+        await getJobsList();
+
+        const findManyCall = (prisma.job.findMany as any).mock.calls[0][0];
+        expect(findManyCall.where.AND).toContainEqual({
+          Status: { value: { not: "expired" } },
+        });
+      });
+
+      it("shows only expired jobs and does not hide them when filtering by expired", async () => {
+        await getJobsList(1, 10, "expired");
+
+        const findManyCall = (prisma.job.findMany as any).mock.calls[0][0];
+        expect(findManyCall.where).toMatchObject({
+          userId: mockUser.id,
+          Status: { value: "expired" },
+        });
+        expect(findManyCall.where.AND ?? []).not.toContainEqual({
+          Status: { value: { not: "expired" } },
         });
       });
     });

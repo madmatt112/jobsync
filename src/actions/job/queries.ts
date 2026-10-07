@@ -121,14 +121,20 @@ const buildJobsWhereClause = (userId: string, filters: JobsListFilters) => {
     ...filterBy,
   };
 
-  // Dismissed discovered jobs are kept only for dedup and shouldn't
-  // clutter the tracked jobs list unless explicitly filtered for.
+  // Dismissed discovered jobs (kept only for dedup) and expired jobs are
+  // noise in the tracked list, so each is hidden unless it is the active
+  // filter — which keeps both reachable through their own dropdown option.
+  const hideConditions: Record<string, any>[] = [];
   if (filter !== "dismissed") {
-    whereClause.AND = [
-      {
-        OR: [{ discoveryStatus: null }, { discoveryStatus: { not: "dismissed" } }],
-      },
-    ];
+    hideConditions.push({
+      OR: [{ discoveryStatus: null }, { discoveryStatus: { not: "dismissed" } }],
+    });
+  }
+  if (filter !== "expired") {
+    hideConditions.push({ Status: { value: { not: "expired" } } });
+  }
+  if (hideConditions.length > 0) {
+    whereClause.AND = hideConditions;
   }
 
   if (companyValue) {
