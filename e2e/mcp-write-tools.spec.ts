@@ -98,16 +98,28 @@ async function seedDefaultMatchableResume(
     .getByRole("row", { name: new RegExp(title, "i") })
     .first();
   await expect(defaultRow).toBeVisible({ timeout: 20000 });
-  await defaultRow.getByTestId("document-actions-menu-btn").click();
-  await page.getByRole("menuitem", { name: "Set as default" }).click();
-
   const confirmButton = page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Set as default" });
+  // A CSS row locator, not getByRole: an open menu marks the table aria-hidden.
   const defaultBadge = page
-    .getByRole("row", { name: new RegExp(title, "i") })
+    .locator("tr", { hasText: title })
     .first()
     .getByText("Default", { exact: true });
+  // Setting the default re-renders the row and detaches the open menu, so a
+  // click can land and still report a timeout. Retry until the badge or the
+  // confirm dialog shows, not until the click reports success.
+  await expect(async () => {
+    if (await confirmButton.or(defaultBadge).first().isVisible()) return;
+    if (await page.getByRole("menu").isVisible()) {
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu")).toBeHidden();
+    }
+    await defaultRow.getByTestId("document-actions-menu-btn").click();
+    await page
+      .getByRole("menuitem", { name: "Set as default" })
+      .click({ timeout: 3000 });
+  }).toPass({ timeout: 20000 });
   await expect(confirmButton.or(defaultBadge).first()).toBeVisible({
     timeout: 20000,
   });
@@ -135,6 +147,8 @@ test.describe("MCP write tools", () => {
     baseURL,
     cleanup,
   }) => {
+    // Token, two-section resume and job setup run before the MCP calls.
+    test.slow();
     const tokenName = uniqueName("e2e mcp write token");
     const resumeTitle = uniqueName("e2e match resume");
     const jobTitle = uniqueName("mcp write job");
