@@ -33,7 +33,6 @@ export async function handleFindJob(
         id: true,
         descriptionCompleteness: true,
         matchScore: true,
-        createdVia: true,
         Status: { select: { value: true } },
         tags: { select: { label: true } },
       },
@@ -43,7 +42,6 @@ export async function handleFindJob(
     const completeness = detail?.descriptionCompleteness ?? "unknown";
     const score =
       detail?.matchScore != null ? `${detail.matchScore}%` : "not scored";
-    const updatable = detail?.createdVia != null;
     // update_job replaces tags wholesale (no merge) — surface the current
     // list so an agent that wants to keep them can echo them back, instead
     // of silently dropping them by omission.
@@ -55,12 +53,9 @@ export async function handleFindJob(
       `Found existing job "${existing.title}" at "${existing.company}" ` +
       `(id: ${existing.id}, status: ${status}, description: ${completeness}, ` +
       `match: ${score}, tags: ${tagsList}). ` +
-      (updatable
-        ? `Call update_job with jobId "${existing.id}" to enrich or correct it ` +
-          `instead of adding a duplicate. Tags are replaced wholesale, not ` +
-          `merged — include the existing ones above if you want to keep them.`
-        : `This job was created in the web app and cannot be updated via MCP — ` +
-          `edit it there instead.`);
+      `Call update_job with jobId "${existing.id}" to enrich or correct it ` +
+      `instead of adding a duplicate. Tags are replaced wholesale, not ` +
+      `merged — include the existing ones above if you want to keep them.`;
 
     return { content: [{ type: "text", text }] };
   } catch (err: any) {
