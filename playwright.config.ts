@@ -10,6 +10,16 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
+
+/**
+ * E2E target. A bare `playwright test` must never hit the :3737 homelab
+ * (real data), so it defaults to a throwaway seeded instance on :3838.
+ * Start one with:  npm run dev -- -p 3838
+ * Override the whole URL with E2E_BASE_URL, or just the port with E2E_PORT.
+ */
+const E2E_PORT = process.env.E2E_PORT ?? "3838";
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${E2E_PORT}`;
+
 export default defineConfig({
   testDir: "./e2e",
   /* Run tests in files in parallel */
@@ -31,7 +41,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3737",
+    baseURL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -77,8 +87,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3737",
+    command: `npm run dev -- -p ${E2E_PORT}`,
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },
