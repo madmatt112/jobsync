@@ -16,6 +16,7 @@ import {
 import { RecordsCount } from "../../RecordsCount";
 import { JobsViewToggle } from "../JobsViewToggle";
 import { AddJob } from "../AddJob";
+import { JobsTagFilter } from "./JobsTagFilter";
 import {
   Company,
   JobLocation,
@@ -48,6 +49,8 @@ export function JobsToolbar({
   onSearchTermChange,
   filterKey,
   onFilterChange,
+  selectedTagIds,
+  onSelectedTagsChange,
   onDownload,
   statuses,
   companies,
@@ -77,6 +80,8 @@ export function JobsToolbar({
   onSearchTermChange: (value: string) => void;
   filterKey: string;
   onFilterChange: (filterBy: string) => void;
+  selectedTagIds: string[];
+  onSelectedTagsChange: (ids: string[]) => void;
   onDownload: () => void;
   statuses: JobStatus[];
   companies: Company[];
@@ -176,6 +181,11 @@ export function JobsToolbar({
             </SelectGroup>
           </SelectContent>
         </Select>
+        <JobsTagFilter
+          tags={tags}
+          selectedTagIds={selectedTagIds}
+          onChange={onSelectedTagsChange}
+        />
         <Button
           size="sm"
           variant="outline"

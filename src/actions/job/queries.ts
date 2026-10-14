@@ -87,6 +87,7 @@ type JobsListFilters = {
   titleValue?: string;
   locationValue?: string;
   sourceValue?: string;
+  tagIds?: string[];
 };
 
 const buildJobsWhereClause = (userId: string, filters: JobsListFilters) => {
@@ -98,6 +99,7 @@ const buildJobsWhereClause = (userId: string, filters: JobsListFilters) => {
     titleValue,
     locationValue,
     sourceValue,
+    tagIds,
   } = filters;
 
   const filterBy = filter
@@ -151,6 +153,12 @@ const buildJobsWhereClause = (userId: string, filters: JobsListFilters) => {
 
   if (sourceValue) {
     whereClause.JobSource = { value: sourceValue };
+  }
+
+  // Match jobs carrying ANY of the selected tags (OR across ids). As a
+  // top-level key it is ANDed with the status, facet and search filters.
+  if (tagIds && tagIds.length > 0) {
+    whereClause.tags = { some: { id: { in: tagIds } } };
   }
 
   if (appliedOnly) {
@@ -240,6 +248,7 @@ export const getJobsList = async (
   locationValue?: string,
   sourceValue?: string,
   sort?: SortState,
+  tagIds?: string[],
 ): Promise<any | undefined> => {
   try {
     const user = await requireUser();
@@ -253,6 +262,7 @@ export const getJobsList = async (
       titleValue,
       locationValue,
       sourceValue,
+      tagIds,
     });
 
     const { data, total } = await findManySorted(
