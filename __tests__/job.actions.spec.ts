@@ -899,6 +899,84 @@ describe("jobActions", () => {
         expect(findManyCall.where.JobSource).toBeUndefined();
       });
     });
+
+    describe("tag filter", () => {
+      const jobA = { id: "job-a", tags: [{ id: "tag-a" }], matchScore: null, matchData: null };
+      const jobB = { id: "job-b", tags: [{ id: "tag-b" }], matchScore: null, matchData: null };
+      const jobNone = { id: "job-none", tags: [], matchScore: null, matchData: null };
+      const allJobs = [jobA, jobB, jobNone];
+
+      // Simulate the ANY-of (OR) semantics Prisma applies for
+      // tags.some.id.in, so the fixtures prove behaviour, not just the shape.
+      const applyTagFilter = (where: any) => {
+        const inIds = where?.tags?.some?.id?.in as string[] | undefined;
+        if (!inIds) return allJobs;
+        return allJobs.filter((j) => j.tags.some((t) => inIds.includes(t.id)));
+      };
+
+      beforeEach(() => {
+        (getCurrentUser as any).mockResolvedValue(mockUser);
+        (prisma.job.findMany as any).mockImplementation(({ where }: any) =>
+          Promise.resolve(applyTagFilter(where)),
+        );
+        (prisma.job.count as any).mockImplementation(({ where }: any) =>
+          Promise.resolve(applyTagFilter(where).length),
+        );
+      });
+
+      it("returns jobs carrying ANY of the selected tags (OR)", async () => {
+        const result = await getJobsList(
+          1, 25, undefined, undefined, undefined, undefined,
+          undefined, undefined, undefined, undefined, ["tag-a", "tag-b"],
+        );
+
+        expect(prisma.job.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tags: { some: { id: { in: ["tag-a", "tag-b"] } } },
+            }),
+          }),
+        );
+        expect(result.data.map((j: any) => j.id)).toEqual(["job-a", "job-b"]);
+        expect(result.total).toBe(2);
+      });
+
+      it("applies no tag filter when the selection is empty", async () => {
+        const result = await getJobsList(
+          1, 25, undefined, undefined, undefined, undefined,
+          undefined, undefined, undefined, undefined, [],
+        );
+
+        const findManyCall = (prisma.job.findMany as any).mock.calls[0][0];
+        expect(findManyCall.where.tags).toBeUndefined();
+        expect(result.data.map((j: any) => j.id)).toEqual([
+          "job-a",
+          "job-b",
+          "job-none",
+        ]);
+      });
+
+      it("omits the tag filter when no tag argument is passed", async () => {
+        await getJobsList();
+
+        const findManyCall = (prisma.job.findMany as any).mock.calls[0][0];
+        expect(findManyCall.where.tags).toBeUndefined();
+      });
+
+      it("ANDs the tag filter with the status filter", async () => {
+        await getJobsList(
+          1, 25, "applied", undefined, undefined, undefined,
+          undefined, undefined, undefined, undefined, ["tag-a"],
+        );
+
+        const findManyCall = (prisma.job.findMany as any).mock.calls[0][0];
+        expect(findManyCall.where).toMatchObject({
+          userId: mockUser.id,
+          Status: { value: "applied" },
+          tags: { some: { id: { in: ["tag-a"] } } },
+        });
+      });
+    });
   });
   describe("getJobDetails", () => {
     it("should throw error when jobId is not provided", async () => {

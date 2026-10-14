@@ -35,6 +35,7 @@ export function useJobsList({
   const [totalJobs, setTotalJobs] = useState(0);
   const [filterKey, setFilterKey] = useState<string>("none");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [initialLoading, setInitialLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const hasSearched = useRef(false);
@@ -42,6 +43,8 @@ export function useJobsList({
   const requestSeq = useRef(0);
   const sortRef = useRef(sort);
   const lastSort = useRef(sort);
+  const tagsRef = useRef(selectedTagIds);
+  const lastTags = useRef(selectedTagIds);
 
   // Read after mount: localStorage is unavailable during SSR, so seeding the
   // initial state from it would cause a hydration mismatch.
@@ -78,6 +81,7 @@ export function useJobsList({
         locationFilter || undefined,
         sourceFilter || undefined,
         sortRef.current ?? undefined,
+        tagsRef.current.length > 0 ? tagsRef.current : undefined,
       );
       if (request !== requestSeq.current) return;
       if (success && data) {
@@ -145,6 +149,17 @@ export function useJobsList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort]);
 
+  // Reload page 1 when the tag selection changes, keeping the status filter
+  // and search. The ref-and-equality guard mirrors the sort effect so mount
+  // (and StrictMode's re-run) does not double-load.
+  useEffect(() => {
+    tagsRef.current = selectedTagIds;
+    if (lastTags.current === selectedTagIds) return;
+    lastTags.current = selectedTagIds;
+    loadJobs(1, filterKey, searchTerm || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTagIds]);
+
   // Infinite scroll: auto-load next page when sentinel is visible
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -191,6 +206,8 @@ export function useJobsList({
     filterKey,
     searchTerm,
     setSearchTerm,
+    selectedTagIds,
+    setSelectedTagIds,
     initialLoading,
     loadingMore,
     loadJobs,

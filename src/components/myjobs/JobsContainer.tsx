@@ -77,6 +77,8 @@ function JobsContainer({
     filterKey,
     searchTerm,
     setSearchTerm,
+    selectedTagIds,
+    setSelectedTagIds,
     initialLoading,
     loadingMore,
     loadJobs,
@@ -153,6 +155,8 @@ function JobsContainer({
           onSearchTermChange={setSearchTerm}
           filterKey={filterKey}
           onFilterChange={onFilterChange}
+          selectedTagIds={selectedTagIds}
+          onSelectedTagsChange={setSelectedTagIds}
           onDownload={downloadJobsList}
           statuses={statuses}
           companies={companies}
