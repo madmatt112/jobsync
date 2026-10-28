@@ -105,10 +105,10 @@ function MyJobsTable({
                   {job.appliedDate ? format(job.appliedDate, "PP") : "N/A"}
                 </TableCell>
                 <TableCell
-                  className="font-medium cursor-pointer max-w-[120px] md:max-w-[220px]"
+                  className="font-medium cursor-pointer w-full max-w-0"
                 >
                   <div className="flex items-center gap-1.5">
-                    <Link href={`/dashboard/myjobs/${job?.id}`} className="block truncate text-primary underline-offset-4 hover:underline">
+                    <Link href={`/dashboard/myjobs/${job?.id}`} title={job.JobTitle?.label} className="block truncate text-primary underline-offset-4 hover:underline">
                       {job.JobTitle?.label}
                     </Link>
                     {(job._count?.Notes ?? 0) > 0 && (
@@ -162,8 +162,10 @@ function MyJobsTable({
                     <MatchJobButton jobId={job.id} />
                   )}
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {job.JobSource?.label}
+                <TableCell className="hidden md:table-cell max-w-[140px]">
+                  <span className="block truncate" title={job.JobSource?.label}>
+                    {job.JobSource?.label}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
