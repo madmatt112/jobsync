@@ -104,6 +104,12 @@ sample has more strong candidates than the database has. It appends to
 new job. It does not change labels that you already gave. A new batch has no
 Claude baseline. The next bake-off run includes all cases.
 
+To remove role kinds that you no longer target, edit `OUT_OF_SCOPE` in
+`export.ts` and run `npm run bakeoff:export -- --mark-scope`. The command sets
+`excluded` on each label job whose title matches. The labelling page and the
+report skip these jobs. Their labels stay in `labels.json`. `--more` does not
+pick out-of-scope jobs.
+
 Optional: format the job text for easier reading first.
 
 ```bash

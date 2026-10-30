@@ -84,6 +84,15 @@ function quotas(sizes: Record<Tier, number>, total: number): Record<Tier, number
   return q;
 }
 
+// Role kinds the operator no longer targets: jobscout's title_gate.hard_exclude
+// sales block (2026-10-06) plus forward-deployed engineer (2026-10-30).
+// --more never picks them; --mark-scope marks them in label-jobs.json.
+const OUT_OF_SCOPE: { reason: string; title: RegExp }[] = [
+  { reason: "sales or solutions engineer", title: /\b(pre-?sales|sales)\b|\bsolutions? (engineer|consultant)|\bbusiness development\b|\baccount (executive|manager)\b/i },
+  { reason: "forward-deployed engineer", title: /\bforward[- ]deployed\b/i },
+];
+const outOfScope = (title: string) => OUT_OF_SCOPE.find((o) => o.title.test(title))?.reason;
+
 // jobscout writes "Fit: <strong>strong</strong>" (or stretch, possible) at the
 // top of a description it pushed. --more uses it only to spread the sample;
 // the labelling page never shows it.
@@ -127,7 +136,9 @@ async function exportMore(prisma: PrismaClient, count: number) {
     orderBy: { id: "asc" },
   });
   const byFit = Object.fromEntries(JOBSCOUT_FITS.map((f) => [f, [] as typeof jobs])) as Record<JobscoutFit, typeof jobs>;
-  for (const job of jobs) byFit[jobscoutFit(job.description)].push(job);
+  for (const job of jobs) {
+    if (!outOfScope(job.JobTitle?.label ?? "")) byFit[jobscoutFit(job.description)].push(job);
+  }
 
   // Same quota rule as the first batch: an even share per group.
   const q = Object.fromEntries(JOBSCOUT_FITS.map((f) => [f, 0])) as Record<JobscoutFit, number>;
@@ -188,6 +199,21 @@ async function main() {
   mkdirSync(dataDir, { recursive: true });
   const snapshot = path.join(dataDir, "snapshot.db");
   execFileSync("sqlite3", ["-readonly", source, `.backup '${snapshot}'`]);
+
+  // --mark-scope: set `excluded` on label jobs whose title is out of scope.
+  // Labels stay in labels.json; the page and the report skip these jobs.
+  if (process.argv.includes("--mark-scope")) {
+    const file = path.join(dataDir, "label-jobs.json");
+    const labelJobs: { title: string; excluded?: string }[] = JSON.parse(readFileSync(file, "utf8"));
+    let marked = 0;
+    for (const job of labelJobs) {
+      const reason = outOfScope(job.title);
+      if (reason && job.excluded !== reason) { job.excluded = reason; marked++; }
+    }
+    writeFileSync(file, JSON.stringify(labelJobs, null, 2));
+    console.log(`Marked ${marked} job(s) out of scope; ${labelJobs.filter((j) => j.excluded).length} excluded in total.`);
+    return;
+  }
 
   const prisma = new PrismaClient({ datasourceUrl: `file:${snapshot}` });
   const more = process.argv.indexOf("--more");

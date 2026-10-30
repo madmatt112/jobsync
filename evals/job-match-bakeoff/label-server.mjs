@@ -25,7 +25,8 @@ if (!existsSync(jobsFile)) {
   console.error('No .data/label-jobs.json. Run the export first (npm run bakeoff:export).');
   process.exit(1);
 }
-const jobs = JSON.parse(readFileSync(jobsFile, 'utf8'));
+// Jobs marked out of scope (export --mark-scope) are not shown.
+const jobs = JSON.parse(readFileSync(jobsFile, 'utf8')).filter((j) => !j.excluded);
 const resumes = JSON.parse(readFileSync(path.join(dataDir, 'resumes.json'), 'utf8'));
 const jobIds = new Set(jobs.map((j) => j.jobId));
 
