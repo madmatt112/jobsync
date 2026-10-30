@@ -43,6 +43,13 @@
   .warn { color: var(--partial); font-size: 13px; }
   summary { cursor: pointer; color: var(--muted); }
   .help { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .deal { align-items: center; gap: 6px; }
+  .deal-label { color: var(--muted); font-size: 13px; }
+  .deal button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); cursor: pointer; font-size: 13px; }
+  .deal button.on { border-color: var(--weak); color: var(--weak); font-weight: 600; }
+  .deal button[data-deal="none"].on { border-color: var(--strong); color: var(--strong); }
+  .deal kbd { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  .deal input { flex: 1; min-width: 160px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; font-size: 13px; }
   .done { color: var(--strong); font-weight: 600; }
 </style>
 </head>
@@ -53,6 +60,7 @@
       <button id="prev">← Prev</button>
       <button id="next">Next →</button>
       <button id="nextOpen">Next unlabelled</button>
+      <button id="nextReview">Next to review</button>
       <span class="progress" id="progress"></span>
     </div>
     <div class="row tiers" style="margin-top:10px">
@@ -61,7 +69,15 @@
       <button data-tier="partial">Partial<kbd>3</kbd></button>
       <button data-tier="weak">Weak<kbd>4</kbd></button>
     </div>
-    <div class="help">Judge fit for you, as if you were deciding whether to apply. Each click saves at once. Keys: 1-4 to label, ← → to move.</div>
+    <div class="row deal" style="margin-top:8px">
+      <span class="deal-label">Dealbreaker:</span>
+      <button data-deal="none">None<kbd>0</kbd></button>
+      <button data-deal="location">Location<kbd>L</kbd></button>
+      <button data-deal="management">Management<kbd>M</kbd></button>
+      <button data-deal="other">Other<kbd>O</kbd></button>
+      <input id="dealNote" placeholder="Note (optional), Enter to save" maxlength="500">
+    </div>
+    <div class="help">Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
   </header>
   <h1 id="title"></h1>
   <div class="meta" id="meta"></div>
@@ -145,25 +161,62 @@
     const current = labels[job.jobId]?.tier;
     document.querySelectorAll('.tiers button').forEach((b) =>
       b.classList.toggle('on', b.dataset.tier === current));
+    const deal = labels[job.jobId]?.dealbreaker;
+    document.querySelectorAll('.deal button').forEach((b) =>
+      b.classList.toggle('on', b.dataset.deal === deal?.kind));
+    $('dealNote').value = deal?.note ?? '';
     const count = Object.keys(labels).length;
+    const open = jobs.filter((j) => labels[j.jobId] && !labels[j.jobId].dealbreaker).length;
     $('progress').innerHTML = `Job ${index + 1} of ${jobs.length} · ` +
-      (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`);
+      (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`) +
+      (open ? ` · ${open} without a dealbreaker answer` : '');
     window.scrollTo(0, 0);
   }
 
-  async function label(tier) {
-    const job = jobs[index];
-    const same = labels[job.jobId]?.tier === tier;
+  async function save(body) {
     const res = await fetch('/api/label', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.jobId, tier: same ? null : tier }),
+      body: JSON.stringify({ jobId: jobs[index].jobId, ...body }),
     });
-    if (!res.ok) { alert('Save failed: ' + await res.text()); return; }
+    if (!res.ok) { alert('Save failed: ' + await res.text()); return false; }
+    return true;
+  }
+  const advance = () => { if (index < jobs.length - 1) index++; };
+
+  // Clicking the current tier again deletes the whole label. A job moves on
+  // once it has both a tier and a dealbreaker answer.
+  async function label(tier) {
+    const job = jobs[index];
+    const same = labels[job.jobId]?.tier === tier;
+    if (!await save({ tier: same ? null : tier })) return;
     if (same) delete labels[job.jobId];
-    else labels[job.jobId] = { tier };
-    if (!same && index < jobs.length - 1) index++;
+    else labels[job.jobId] = { ...labels[job.jobId], tier };
+    if (!same && labels[job.jobId].dealbreaker) advance();
     render();
+  }
+
+  // 'none' moves on when the job has a tier. Any other kind stays, so you can
+  // add a note and re-tier as if eligible. Clicking the current kind clears it.
+  async function dealbreaker(kind) {
+    const job = jobs[index];
+    const same = labels[job.jobId]?.dealbreaker?.kind === kind;
+    const value = same ? null : { kind, note: kind === 'none' ? '' : $('dealNote').value.trim() };
+    if (!await save({ dealbreaker: value })) return;
+    const next = { ...labels[job.jobId] };
+    if (same) delete next.dealbreaker; else next.dealbreaker = value;
+    labels[job.jobId] = next;
+    if (!same && kind === 'none' && next.tier) advance();
+    render();
+  }
+
+  async function saveNote() {
+    const job = jobs[index];
+    const deal = labels[job.jobId]?.dealbreaker;
+    if (!deal || deal.kind === 'none') return;
+    const note = $('dealNote').value.trim();
+    if (note === deal.note) return;
+    if (await save({ dealbreaker: { kind: deal.kind, note } })) deal.note = note;
   }
 
   const go = (d) => { index = Math.min(jobs.length - 1, Math.max(0, index + d)); render(); };
@@ -179,10 +232,25 @@
   $('prev').onclick = () => go(-1);
   $('next').onclick = () => go(1);
   $('nextOpen').onclick = nextOpen;
+  $('nextReview').onclick = () => {
+    for (let k = 1; k <= jobs.length; k++) {
+      const i = (index + k) % jobs.length;
+      const l = labels[jobs[i].jobId];
+      if (l && !l.dealbreaker) { index = i; return render(); }
+    }
+  };
+  document.querySelectorAll('.deal button').forEach((b) =>
+    b.addEventListener('click', () => dealbreaker(b.dataset.deal)));
+  $('dealNote').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { saveNote(); e.target.blur(); }
+  });
+  $('dealNote').addEventListener('blur', saveNote);
   document.addEventListener('keydown', (e) => {
-    if (e.target.closest('summary')) return;
+    if (e.target.closest('summary') || e.target.matches('input')) return;
     const tier = { 1: 'strong', 2: 'good', 3: 'partial', 4: 'weak' }[e.key];
+    const deal = { 0: 'none', l: 'location', m: 'management', o: 'other' }[e.key.toLowerCase()];
     if (tier) label(tier);
+    else if (deal) dealbreaker(deal);
     else if (e.key === 'ArrowLeft') go(-1);
     else if (e.key === 'ArrowRight') go(1);
   });
