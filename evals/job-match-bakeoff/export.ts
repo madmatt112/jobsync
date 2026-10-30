@@ -169,6 +169,7 @@ async function main() {
         title: job.JobTitle?.label ?? "",
         company: job.Company?.label ?? "",
         location: job.Location?.label ?? "",
+        url: job.jobUrl ?? null,
         completeness: match.descriptionCompleteness ?? null,
         description: jobPre.data.normalizedText,
         resumeId,

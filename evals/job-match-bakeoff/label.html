@@ -59,6 +59,7 @@
   </header>
   <h1 id="title"></h1>
   <div class="meta" id="meta"></div>
+  <p><a id="posting" target="_blank" rel="noopener noreferrer"></a></p>
   <pre id="description"></pre>
   <details>
     <summary>Resume used for this job</summary>
@@ -82,6 +83,10 @@
       b.textContent = job.completeness + ' description';
       $('meta').append(b);
     }
+    const posting = $('posting');
+    const url = /^https?:\/\//i.test(job.url ?? '') ? job.url : null;
+    posting.textContent = url ? 'Open the original posting ↗' : 'No posting link stored';
+    if (url) posting.href = url; else posting.removeAttribute('href');
     $('description').textContent = job.description;
     $('resume').textContent = resumes[job.resumeId]?.text ?? '(resume not exported)';
     const current = labels[job.jobId]?.tier;
