@@ -1,0 +1,72 @@
+description: Job match bake-off - cheap models vs Matthew's labels and the Claude baseline
+
+# Model ids checked on 2026-10-30 against DeepSeek /models (deepseek-flash,
+# deepseek-v4-pro) and OpenRouter /models. DeepSeek retired deepseek-chat and
+# deepseek-reasoner as models: both names now serve deepseek-flash, so the two
+# DeepSeek contenders are deepseek-flash with thinking off and on.
+#
+# temperature 0.3 matches the in-app Match (TEMPERATURES.FEEDBACK in
+# src/lib/agent/tools/matchJob.ts) and the automation match. Thinking mode on
+# DeepSeek and gpt-5.4-mini ignore temperature.
+#
+# The app sets no output limit. These caps are well above a full analysis
+# (about 1,500-4,000 tokens with thinking), so they do not cut a reply short.
+# OpenRouter refuses a request whose max_tokens costs more than the key has
+# left, so its caps stay at 8000.
+#
+# provider.mjs times each call and records cache hits and billed cost.
+
+providers:
+  - id: file://./provider.mjs
+    label: deepseek-chat
+    config:
+      baseUrl: https://api.deepseek.com
+      apiKeyEnvar: DEEPSEEK_API_KEY
+      model: deepseek-flash
+      body:
+        temperature: 0.3
+        max_tokens: 16000
+        thinking: { type: disabled }
+
+  - id: file://./provider.mjs
+    label: deepseek-reasoner
+    config:
+      baseUrl: https://api.deepseek.com
+      apiKeyEnvar: DEEPSEEK_API_KEY
+      model: deepseek-flash
+      body:
+        max_tokens: 32000
+        thinking: { type: enabled }
+
+  - id: file://./provider.mjs
+    label: gemini-3.8-flash
+    config:
+      baseUrl: https://openrouter.ai/api/v1
+      apiKeyEnvar: OPENROUTER_API_KEY
+      model: google/gemini-3.8-flash
+      body:
+        temperature: 0.3
+        max_tokens: 8000
+        usage: { include: true }
+
+  - id: file://./provider.mjs
+    label: gpt-5.4-mini
+    config:
+      baseUrl: https://openrouter.ai/api/v1
+      apiKeyEnvar: OPENROUTER_API_KEY
+      model: openai/gpt-5.4-mini
+      body:
+        max_tokens: 8000
+        usage: { include: true }
+
+prompts:
+  - file://./prompt.ts
+
+# One test per exported job; export.ts writes this file.
+tests: file://./.data/cases.json
+
+# Format checks only. Agreement with the labels is computed by report.ts.
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://../job-match/assertions.ts:assertScoresLine
