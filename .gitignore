@@ -78,3 +78,7 @@ evals/agent-chat/tools.json
 # re-run, but not part of the shipped suite. See the runs they produced in
 # docs/architecture/agent-chat.md.
 evals/*/_investigate-*
+
+# Job match bake-off: exported jobs, resumes, labels, results and keys stay local
+evals/job-match-bakeoff/.data/
+evals/job-match-bakeoff/.env

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Match Labels</title>
+<style>
+  :root {
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --card: #ffffff;
+    --strong: #15803d; --good: #2563eb; --partial: #b45309; --weak: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --fg: #f5f5f4; --muted: #a8a29e; --line: #44403c; --card: #292524;
+      --strong: #4ade80; --good: #60a5fa; --partial: #fbbf24; --weak: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 16px; }
+  header { position: sticky; top: 0; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line); z-index: 1; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .progress { color: var(--muted); font-size: 13px; margin-left: auto; }
+  h1 { font-size: 20px; margin: 16px 0 2px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .badge { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; }
+  .tiers button { flex: 1 1 0; min-width: 90px; padding: 10px; font-size: 15px; font-weight: 600; border-radius: 8px;
+    border: 2px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+  .tiers button kbd { font-weight: 400; color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .tiers button.on[data-tier=strong] { border-color: var(--strong); color: var(--strong); }
+  .tiers button.on[data-tier=good] { border-color: var(--good); color: var(--good); }
+  .tiers button.on[data-tier=partial] { border-color: var(--partial); color: var(--partial); }
+  .tiers button.on[data-tier=weak] { border-color: var(--weak); color: var(--weak); }
+  .nav button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+  pre { white-space: pre-wrap; word-wrap: break-word; font: inherit; background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; padding: 14px; margin: 0; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .help { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .done { color: var(--strong); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="row nav">
+      <button id="prev">← Prev</button>
+      <button id="next">Next →</button>
+      <button id="nextOpen">Next unlabelled</button>
+      <span class="progress" id="progress"></span>
+    </div>
+    <div class="row tiers" style="margin-top:10px">
+      <button data-tier="strong">Strong<kbd>1</kbd></button>
+      <button data-tier="good">Good<kbd>2</kbd></button>
+      <button data-tier="partial">Partial<kbd>3</kbd></button>
+      <button data-tier="weak">Weak<kbd>4</kbd></button>
+    </div>
+    <div class="help">Judge fit for you, as if you were deciding whether to apply. Each click saves at once. Keys: 1-4 to label, ← → to move.</div>
+  </header>
+  <h1 id="title"></h1>
+  <div class="meta" id="meta"></div>
+  <pre id="description"></pre>
+  <details>
+    <summary>Resume used for this job</summary>
+    <pre id="resume"></pre>
+  </details>
+</main>
+<script>
+  let jobs = [], resumes = {}, labels = {}, index = 0;
+  const $ = (id) => document.getElementById(id);
+
+  function render() {
+    const job = jobs[index];
+    if (!job) return;
+    $('title').textContent = job.title || '(no title)';
+    const parts = [job.company, job.location].filter(Boolean).join(' · ');
+    $('meta').innerHTML = '';
+    $('meta').append(parts + '  ');
+    if (job.completeness) {
+      const b = document.createElement('span');
+      b.className = 'badge';
+      b.textContent = job.completeness + ' description';
+      $('meta').append(b);
+    }
+    $('description').textContent = job.description;
+    $('resume').textContent = resumes[job.resumeId]?.text ?? '(resume not exported)';
+    const current = labels[job.jobId]?.tier;
+    document.querySelectorAll('.tiers button').forEach((b) =>
+      b.classList.toggle('on', b.dataset.tier === current));
+    const count = Object.keys(labels).length;
+    $('progress').innerHTML = `Job ${index + 1} of ${jobs.length} · ` +
+      (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`);
+    window.scrollTo(0, 0);
+  }
+
+  async function label(tier) {
+    const job = jobs[index];
+    const same = labels[job.jobId]?.tier === tier;
+    const res = await fetch('/api/label', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.jobId, tier: same ? null : tier }),
+    });
+    if (!res.ok) { alert('Save failed: ' + await res.text()); return; }
+    if (same) delete labels[job.jobId];
+    else labels[job.jobId] = { tier };
+    if (!same && index < jobs.length - 1) index++;
+    render();
+  }
+
+  const go = (d) => { index = Math.min(jobs.length - 1, Math.max(0, index + d)); render(); };
+  function nextOpen() {
+    for (let k = 1; k <= jobs.length; k++) {
+      const i = (index + k) % jobs.length;
+      if (!labels[jobs[i].jobId]) { index = i; return render(); }
+    }
+  }
+
+  document.querySelectorAll('.tiers button').forEach((b) =>
+    b.addEventListener('click', () => label(b.dataset.tier)));
+  $('prev').onclick = () => go(-1);
+  $('next').onclick = () => go(1);
+  $('nextOpen').onclick = nextOpen;
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest('summary')) return;
+    const tier = { 1: 'strong', 2: 'good', 3: 'partial', 4: 'weak' }[e.key];
+    if (tier) label(tier);
+    else if (e.key === 'ArrowLeft') go(-1);
+    else if (e.key === 'ArrowRight') go(1);
+  });
+
+  fetch('/api/data').then((r) => r.json()).then((d) => {
+    jobs = d.jobs; resumes = d.resumes; labels = d.labels;
+    const first = jobs.findIndex((j) => !labels[j.jobId]);
+    index = first >= 0 ? first : 0;
+    render();
+  });
+</script>
+</body>
+</html>
