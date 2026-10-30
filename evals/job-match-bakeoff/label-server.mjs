@@ -73,6 +73,9 @@ const server = createServer((req, res) => {
             if (note.trim()) label.note = note.trim().slice(0, 500);
             else delete label.note;
           }
+          // A label with a tier and no dealbreaker stores none explicitly, so a
+          // blank never needs interpreting downstream.
+          if (label.tier && !label.dealbreaker) label.dealbreaker = { kind: 'none' };
           labels[jobId] = label;
         }
         writeLabels(labels);

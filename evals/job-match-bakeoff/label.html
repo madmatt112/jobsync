@@ -195,7 +195,7 @@
     const note = $('note').value.trim();
     if (!await save(same ? { tier: null } : { tier, note })) return;
     if (same) delete labels[job.jobId];
-    else labels[job.jobId] = { ...labels[job.jobId], tier, ...(note ? { note } : {}) };
+    else labels[job.jobId] = { dealbreaker: { kind: 'none' }, ...labels[job.jobId], tier, ...(note ? { note } : {}) };
     if (!same && !note) delete labels[job.jobId].note;
     if (!same) advance();
     render();
@@ -209,7 +209,9 @@
     const value = same ? null : { kind };
     if (!await save({ dealbreaker: value })) return;
     const next = { ...labels[job.jobId] };
-    if (same) delete next.dealbreaker; else next.dealbreaker = value;
+    // The server stores a cleared dealbreaker on a tiered label as none.
+    if (same) next.dealbreaker = next.tier ? { kind: 'none' } : undefined; else next.dealbreaker = value;
+    if (!next.dealbreaker) delete next.dealbreaker;
     labels[job.jobId] = next;
     if (!same && kind === 'none' && next.tier) advance();
     render();
