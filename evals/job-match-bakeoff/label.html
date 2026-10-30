@@ -75,9 +75,9 @@
       <button data-deal="location">Location<kbd>L</kbd></button>
       <button data-deal="management">Management<kbd>M</kbd></button>
       <button data-deal="other">Other<kbd>O</kbd></button>
-      <input id="dealNote" placeholder="Note (optional), Enter to save" maxlength="500">
+      <input id="note" placeholder="Reason (optional), e.g. principal, too senior" maxlength="500">
     </div>
-    <div class="help">Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Leave it blank for none. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
+    <div class="help">Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Leave it blank for none. The reason box saves with the tier, or on Enter. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
   </header>
   <h1 id="title"></h1>
   <div class="meta" id="meta"></div>
@@ -164,7 +164,7 @@
     const deal = labels[job.jobId]?.dealbreaker;
     document.querySelectorAll('.deal button').forEach((b) =>
       b.classList.toggle('on', b.dataset.deal === deal?.kind));
-    $('dealNote').value = deal?.note ?? '';
+    $('note').value = labels[job.jobId]?.note ?? '';
     const count = Object.keys(labels).length;
     // Batch 1 was labelled before the dealbreaker field existed, so a blank
     // there means not reviewed yet; in later batches blank means none.
@@ -192,19 +192,21 @@
   async function label(tier) {
     const job = jobs[index];
     const same = labels[job.jobId]?.tier === tier;
-    if (!await save({ tier: same ? null : tier })) return;
+    const note = $('note').value.trim();
+    if (!await save(same ? { tier: null } : { tier, note })) return;
     if (same) delete labels[job.jobId];
-    else labels[job.jobId] = { ...labels[job.jobId], tier };
+    else labels[job.jobId] = { ...labels[job.jobId], tier, ...(note ? { note } : {}) };
+    if (!same && !note) delete labels[job.jobId].note;
     if (!same) advance();
     render();
   }
 
   // 'none' moves on when the job has a tier. Any other kind stays, so you can
-  // add a note and re-tier as if eligible. Clicking the current kind clears it.
+  // add a reason and re-tier as if eligible. Clicking the current kind clears it.
   async function dealbreaker(kind) {
     const job = jobs[index];
     const same = labels[job.jobId]?.dealbreaker?.kind === kind;
-    const value = same ? null : { kind, note: kind === 'none' ? '' : $('dealNote').value.trim() };
+    const value = same ? null : { kind };
     if (!await save({ dealbreaker: value })) return;
     const next = { ...labels[job.jobId] };
     if (same) delete next.dealbreaker; else next.dealbreaker = value;
@@ -213,13 +215,13 @@
     render();
   }
 
+  // A reason typed before the tier is saved by the tier click instead.
   async function saveNote() {
-    const job = jobs[index];
-    const deal = labels[job.jobId]?.dealbreaker;
-    if (!deal || deal.kind === 'none') return;
-    const note = $('dealNote').value.trim();
-    if (note === deal.note) return;
-    if (await save({ dealbreaker: { kind: deal.kind, note } })) deal.note = note;
+    const label = labels[jobs[index].jobId];
+    if (!label?.tier) return;
+    const note = $('note').value.trim();
+    if (note === (label.note ?? '')) return;
+    if (await save({ note })) { if (note) label.note = note; else delete label.note; }
   }
 
   const go = (d) => { index = Math.min(jobs.length - 1, Math.max(0, index + d)); render(); };
@@ -244,10 +246,10 @@
   };
   document.querySelectorAll('.deal button').forEach((b) =>
     b.addEventListener('click', () => dealbreaker(b.dataset.deal)));
-  $('dealNote').addEventListener('keydown', (e) => {
+  $('note').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { saveNote(); e.target.blur(); }
   });
-  $('dealNote').addEventListener('blur', saveNote);
+  $('note').addEventListener('blur', saveNote);
   document.addEventListener('keydown', (e) => {
     if (e.target.closest('summary') || e.target.matches('input')) return;
     const tier = { 1: 'strong', 2: 'good', 3: 'partial', 4: 'weak' }[e.key];
