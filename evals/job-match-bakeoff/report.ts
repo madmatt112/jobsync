@@ -125,9 +125,9 @@ function main() {
     if (t && !excluded.has(jobId)) labels.set(jobId, t);
   }
   const titleOf = new Map(jobs.map((j) => [j.jobId, `${j.title} — ${j.company}`]));
-  const baseline: { jobId: string; tier: Tier; score: number }[] = readJson(
+  const baseline: { jobId: string; tier: Tier; score: number }[] = (readJson(
     path.join(dataDir, "claude-baseline.json"),
-  );
+  ) as { jobId: string; tier: Tier; score: number }[]).filter((b) => !excluded.has(b.jobId));
   const results = readJson(resultsFile).results.results as any[];
 
   // model -> jobId -> runs
@@ -278,7 +278,7 @@ function main() {
     `# Job match bake-off report`,
     ``,
     `Generated ${new Date().toISOString()} from \`${path.basename(resultsFile)}\` and \`${path.basename(labelsFile)}\`.`,
-    `Labels: ${labels.size} of ${jobs.length} jobs.${labels.size < jobs.length ? " **Labelling is not complete; the figures are provisional.**" : ""}`,
+    `Labels: ${labels.size} of ${jobs.length - excluded.size} in-scope jobs (${excluded.size} out of scope).${labels.size < jobs.length - excluded.size ? " **Labelling is not complete; the figures are provisional.**" : ""}`,
     ``,
     `## Result`,
     ``,
