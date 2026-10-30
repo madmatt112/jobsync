@@ -77,7 +77,7 @@
       <button data-deal="other">Other<kbd>O</kbd></button>
       <input id="dealNote" placeholder="Note (optional), Enter to save" maxlength="500">
     </div>
-    <div class="help">Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
+    <div class="help">Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Leave it blank for none. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
   </header>
   <h1 id="title"></h1>
   <div class="meta" id="meta"></div>
@@ -166,10 +166,13 @@
       b.classList.toggle('on', b.dataset.deal === deal?.kind));
     $('dealNote').value = deal?.note ?? '';
     const count = Object.keys(labels).length;
-    const open = jobs.filter((j) => labels[j.jobId] && !labels[j.jobId].dealbreaker).length;
+    // Batch 1 was labelled before the dealbreaker field existed, so a blank
+    // there means not reviewed yet; in later batches blank means none.
+    const toReview = (j) => !j.batch && labels[j.jobId] && !labels[j.jobId].dealbreaker;
+    const open = jobs.filter(toReview).length;
     $('progress').innerHTML = `Job ${index + 1} of ${jobs.length} · ` +
       (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`) +
-      (open ? ` · ${open} without a dealbreaker answer` : '');
+      (open ? ` · ${open} first-batch jobs to review` : '');
     window.scrollTo(0, 0);
   }
 
@@ -184,15 +187,15 @@
   }
   const advance = () => { if (index < jobs.length - 1) index++; };
 
-  // Clicking the current tier again deletes the whole label. A job moves on
-  // once it has both a tier and a dealbreaker answer.
+  // Clicking the current tier again deletes the whole label. A tier click
+  // moves on; a blank dealbreaker counts as none.
   async function label(tier) {
     const job = jobs[index];
     const same = labels[job.jobId]?.tier === tier;
     if (!await save({ tier: same ? null : tier })) return;
     if (same) delete labels[job.jobId];
     else labels[job.jobId] = { ...labels[job.jobId], tier };
-    if (!same && labels[job.jobId].dealbreaker) advance();
+    if (!same) advance();
     render();
   }
 
@@ -235,8 +238,8 @@
   $('nextReview').onclick = () => {
     for (let k = 1; k <= jobs.length; k++) {
       const i = (index + k) % jobs.length;
-      const l = labels[jobs[i].jobId];
-      if (l && !l.dealbreaker) { index = i; return render(); }
+      const j = jobs[i];
+      if (!j.batch && labels[j.jobId] && !labels[j.jobId].dealbreaker) { index = i; return render(); }
     }
   };
   document.querySelectorAll('.deal button').forEach((b) =>
