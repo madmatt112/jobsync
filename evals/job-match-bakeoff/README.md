@@ -95,6 +95,22 @@ The export writes these files to `.data/` (outside git):
 
 ### 3. Label the jobs
 
+Optional: format the job text for easier reading first.
+
+```bash
+npm run bakeoff:format
+```
+
+This step sends each job description to `deepseek-flash` (thinking off) one
+time. The model changes the layout to headings, lists and key facts. It does
+not change the words. It also removes the jobscout note at the start, because
+that note has a fit score that can change your label. The script adds
+`formatted` and `coverage` to `label-jobs.json`. `coverage` is the part of the
+original words that the formatted text keeps. The page shows a warning when
+`coverage` is less than 0.85, and it always shows the raw text in a collapsed
+section. Only the labelling page uses this text. The bake-off prompts use the
+original text. The cost for 40 jobs is approximately USD 0.01.
+
 ```bash
 npm run bakeoff:label
 ```
