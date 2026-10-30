@@ -11,7 +11,7 @@
  * in-app Match. Everything it writes goes to .data/ (gitignored).
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { resumeDetailInclude } from "@/lib/jobs/resumeDetailInclude";
@@ -84,6 +84,104 @@ function quotas(sizes: Record<Tier, number>, total: number): Record<Tier, number
   return q;
 }
 
+// jobscout writes "Fit: <strong>strong</strong>" (or stretch, possible) at the
+// top of a description it pushed. --more uses it only to spread the sample;
+// the labelling page never shows it.
+const JOBSCOUT_FITS = ["strong", "stretch", "possible", "none"] as const;
+type JobscoutFit = (typeof JOBSCOUT_FITS)[number];
+function jobscoutFit(description: string | null): JobscoutFit {
+  const word = description?.match(/Fit:\s*(?:<strong>)?\s*(\w+)/i)?.[1]?.toLowerCase();
+  return (JOBSCOUT_FITS as readonly string[]).includes(word ?? "") ? (word as JobscoutFit) : "none";
+}
+
+/**
+ * Append a further batch of label jobs (npm run bakeoff:export -- --more 60).
+ * It picks jobs that are not in label-jobs.json yet, with or without a stored
+ * match, spread evenly across jobscout's fit verdicts, and appends them to
+ * label-jobs.json, cases.json and resumes.json with `batch` set. A job uses
+ * the resume the in-app Match picks: the job's linked resume, else the
+ * default resume, else the only one. Labels already given are not touched.
+ */
+async function exportMore(prisma: PrismaClient, count: number) {
+  const read = <T,>(name: string, fallback: T): T => {
+    const file = path.join(dataDir, name);
+    return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as T) : fallback;
+  };
+  const write = (name: string, value: unknown) =>
+    writeFileSync(path.join(dataDir, name), JSON.stringify(value, null, 2));
+
+  const labelJobs = read<{ jobId: string; batch?: number }[]>("label-jobs.json", []);
+  const cases = read<unknown[]>("cases.json", []);
+  const resumes = read<Record<string, { title: string; text: string }>>("resumes.json", {});
+  const done = new Set(labelJobs.map((j) => j.jobId));
+  const batch = Math.max(1, ...labelJobs.map((j) => j.batch ?? 1)) + 1;
+
+  const users = await prisma.user.findMany({ select: { defaultResumeId: true } });
+  const allResumes = await prisma.resume.findMany({ select: { id: true } });
+  const fallbackResume = users[0]?.defaultResumeId
+    ?? (allResumes.length === 1 ? allResumes[0].id : undefined);
+
+  const jobs = await prisma.job.findMany({
+    where: { id: { notIn: [...done] }, descriptionCompleteness: { not: "title-only" } },
+    include: { JobTitle: true, Company: true, Location: true },
+    orderBy: { id: "asc" },
+  });
+  const byFit = Object.fromEntries(JOBSCOUT_FITS.map((f) => [f, [] as typeof jobs])) as Record<JobscoutFit, typeof jobs>;
+  for (const job of jobs) byFit[jobscoutFit(job.description)].push(job);
+
+  // Same quota rule as the first batch: an even share per group.
+  const q = Object.fromEntries(JOBSCOUT_FITS.map((f) => [f, 0])) as Record<JobscoutFit, number>;
+  for (let left = count; left > 0; ) {
+    const open = JOBSCOUT_FITS.filter((f) => q[f] < byFit[f].length);
+    if (open.length === 0) break;
+    for (const f of open) if (left > 0) { q[f]++; left--; }
+  }
+  const rand = rng(SEED + batch);
+  const picked = shuffle(JOBSCOUT_FITS.flatMap((f) => shuffle(byFit[f], rand).slice(0, q[f])), rand);
+
+  const skipped: string[] = [];
+  let added = 0;
+  for (const job of picked) {
+    const resumeId = job.resumeId ?? fallbackResume;
+    if (!resumeId) { skipped.push(`${job.id}: no resume to match against`); continue; }
+    if (!resumes[resumeId]) {
+      const row = await prisma.resume.findUnique({ where: { id: resumeId }, include: resumeDetailInclude });
+      const pre = row ? await preprocessResume(row as unknown as Resume) : null;
+      if (!row || !pre?.success) { skipped.push(`${job.id}: resume ${resumeId} unusable`); continue; }
+      resumes[resumeId] = { title: row.title, text: pre.data.normalizedText };
+    }
+    const jobPre = await preprocessJob(job as unknown as JobResponse);
+    if (!jobPre.success) { skipped.push(`${job.id}: job preprocessing failed (${jobPre.error.code})`); continue; }
+
+    cases.push({
+      description: job.id,
+      vars: { jobId: job.id, resumeId, batch, user: buildJobMatchPrompt(resumes[resumeId].text, jobPre.data.normalizedText) },
+    });
+    labelJobs.push({
+      jobId: job.id,
+      title: job.JobTitle?.label ?? "",
+      company: job.Company?.label ?? "",
+      location: job.Location?.label ?? "",
+      url: job.jobUrl ?? null,
+      completeness: job.descriptionCompleteness ?? null,
+      description: jobPre.data.normalizedText,
+      resumeId,
+      batch,
+    } as (typeof labelJobs)[number]);
+    added++;
+  }
+
+  write("cases.json", cases);
+  write("label-jobs.json", labelJobs);
+  write("resumes.json", resumes);
+  write(`export-meta-batch${batch}.json`, {
+    exportedAt: new Date().toISOString(), batch, seed: SEED + batch, quotas: q,
+    available: Object.fromEntries(JOBSCOUT_FITS.map((f) => [f, byFit[f].length])), skipped,
+  });
+  console.log(`Batch ${batch}: added ${added} jobs (quotas ${JSON.stringify(q)}), ${skipped.length} skipped.`);
+  for (const s of skipped) console.log(`  skipped ${s}`);
+}
+
 async function main() {
   const source = arg("--db") ?? DEFAULT_DB;
   if (!existsSync(source)) throw new Error(`No database at ${source}`);
@@ -92,6 +190,14 @@ async function main() {
   execFileSync("sqlite3", ["-readonly", source, `.backup '${snapshot}'`]);
 
   const prisma = new PrismaClient({ datasourceUrl: `file:${snapshot}` });
+  const more = process.argv.indexOf("--more");
+  if (more >= 0) {
+    try {
+      return await exportMore(prisma, Number(process.argv[more + 1] ?? 60));
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
   try {
     const jobs = await prisma.job.findMany({
       where: { matchData: { not: null } },

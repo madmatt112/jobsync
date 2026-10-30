@@ -95,6 +95,15 @@ The export writes these files to `.data/` (outside git):
 
 ### 3. Label the jobs
 
+To add a further batch of jobs to label, run
+`npm run bakeoff:export -- --more 60`. This command adds jobs that are not
+in `label-jobs.json` yet, with or without a stored match. It takes an equal
+number from each jobscout fit verdict (strong, stretch, possible, none), so the
+sample has more strong candidates than the database has. It appends to
+`label-jobs.json`, `cases.json` and `resumes.json` and sets `batch` on each
+new job. It does not change labels that you already gave. A new batch has no
+Claude baseline. The next bake-off run includes all cases.
+
 Optional: format the job text for easier reading first.
 
 ```bash
