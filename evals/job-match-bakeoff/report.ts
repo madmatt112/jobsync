@@ -113,15 +113,17 @@ function main() {
   for (const f of [resultsFile, labelsFile]) {
     if (!existsSync(f)) throw new Error(`Missing ${f}`);
   }
+  const jobs: { jobId: string; title: string; company: string; excluded?: string }[] = readJson(
+    path.join(dataDir, "label-jobs.json"),
+  );
+  // Jobs marked out of scope (export --mark-scope) count nowhere in the report.
+  const excluded = new Set(jobs.filter((j) => j.excluded).map((j) => j.jobId));
   const labelsRaw: Record<string, { tier: string }> = readJson(labelsFile);
   const labels = new Map<string, Tier>();
   for (const [jobId, l] of Object.entries(labelsRaw)) {
     const t = tierOf(l.tier);
-    if (t) labels.set(jobId, t);
+    if (t && !excluded.has(jobId)) labels.set(jobId, t);
   }
-  const jobs: { jobId: string; title: string; company: string }[] = readJson(
-    path.join(dataDir, "label-jobs.json"),
-  );
   const titleOf = new Map(jobs.map((j) => [j.jobId, `${j.title} — ${j.company}`]));
   const baseline: { jobId: string; tier: Tier; score: number }[] = readJson(
     path.join(dataDir, "claude-baseline.json"),
@@ -135,6 +137,7 @@ function main() {
   for (const r of results) {
     const model: string = r.provider?.label ?? r.provider?.id;
     const jobId: string = r.vars?.jobId ?? r.testCase?.vars?.jobId;
+    if (excluded.has(jobId)) continue;
     if (!runs.has(model)) {
       runs.set(model, new Map());
       meta.set(model, []);

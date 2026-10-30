@@ -35,8 +35,21 @@
   pre { white-space: pre-wrap; word-wrap: break-word; font: inherit; background: var(--card); border: 1px solid var(--line);
     border-radius: 8px; padding: 14px; margin: 0; }
   details { margin-top: 14px; }
+  .posting { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px 18px 12px; }
+  .posting h3 { font-size: 15px; margin: 18px 0 6px; }
+  .posting ul { margin: 6px 0; padding-left: 22px; }
+  .posting p { margin: 8px 0; }
+  .posting .fact { margin: 2px 0; }
+  .warn { color: var(--partial); font-size: 13px; }
   summary { cursor: pointer; color: var(--muted); }
   .help { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .deal { align-items: center; gap: 6px; }
+  .deal-label { color: var(--muted); font-size: 13px; }
+  .deal button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); cursor: pointer; font-size: 13px; }
+  .deal button.on { border-color: var(--weak); color: var(--weak); font-weight: 600; }
+  .deal button[data-deal="none"].on { border-color: var(--strong); color: var(--strong); }
+  .deal kbd { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  .deal input { flex: 1; min-width: 160px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; font-size: 13px; }
   .done { color: var(--strong); font-weight: 600; }
 </style>
 </head>
@@ -47,6 +60,7 @@
       <button id="prev">← Prev</button>
       <button id="next">Next →</button>
       <button id="nextOpen">Next unlabelled</button>
+      <button id="nextReview">Next to review</button>
       <span class="progress" id="progress"></span>
     </div>
     <div class="row tiers" style="margin-top:10px">
@@ -55,11 +69,24 @@
       <button data-tier="partial">Partial<kbd>3</kbd></button>
       <button data-tier="weak">Weak<kbd>4</kbd></button>
     </div>
-    <div class="help">Judge fit for you, as if you were deciding whether to apply. Each click saves at once. Keys: 1-4 to label, ← → to move.</div>
+    <div class="row deal" style="margin-top:8px">
+      <span class="deal-label">Dealbreaker:</span>
+      <button data-deal="none">None<kbd>0</kbd></button>
+      <button data-deal="location">Location<kbd>L</kbd></button>
+      <button data-deal="management">Management<kbd>M</kbd></button>
+      <button data-deal="other">Other<kbd>O</kbd></button>
+      <input id="note" placeholder="Reason (optional), e.g. principal, too senior" maxlength="500">
+    </div>
+    <div class="help" hidden>Tier = fit on skills and experience, as if you were eligible and interested. Dealbreaker = a reason you would not apply anyway; it does not change the tier. Leave it blank for none. The reason box saves with the tier, or on Enter. Each click saves at once. Keys: 1-4 tier, 0/L/M/O dealbreaker, ← → move.</div>
   </header>
   <h1 id="title"></h1>
   <div class="meta" id="meta"></div>
-  <pre id="description"></pre>
+  <p><a id="posting" target="_blank" rel="noopener noreferrer"></a></p>
+  <div id="description" class="posting"></div>
+  <details>
+    <summary>Raw text as stored in JobSync</summary>
+    <pre id="raw"></pre>
+  </details>
   <details>
     <summary>Resume used for this job</summary>
     <pre id="resume"></pre>
@@ -68,6 +95,49 @@
 <script>
   let jobs = [], resumes = {}, labels = {}, index = 0;
   const $ = (id) => document.getElementById(id);
+
+  // Renders the small markdown subset format-postings.mjs asks for: '## '
+  // headings, '- ' items, '**Label:** value' facts and paragraphs. Text is
+  // set with textContent, so nothing in a posting is parsed as HTML.
+  function renderPosting(job) {
+    const box = $('description');
+    box.innerHTML = '';
+    $('raw').textContent = job.description;
+    if (!job.formatted) {
+      const pre = document.createElement('pre');
+      pre.textContent = job.description;
+      box.append(pre);
+      return;
+    }
+    if (job.coverage < 0.85 || job.noteLeft) {
+      const w = document.createElement('p');
+      w.className = 'warn';
+      w.textContent = 'The formatted text may differ from the posting. Check the raw text below.';
+      box.append(w);
+    }
+    let list = null;
+    const add = (tag, text, cls) => {
+      const el = document.createElement(tag);
+      if (cls) el.className = cls;
+      const m = text.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+      if (m) { const b = document.createElement('strong'); b.textContent = m[1]; el.append(b, ' ' + m[2]); }
+      else el.textContent = text.replace(/\*\*/g, '');
+      return el;
+    };
+    for (const line of job.formatted.split('\n')) {
+      const t = line.trim();
+      if (/^[-•*]\s+/.test(t)) {
+        if (!list) { list = document.createElement('ul'); box.append(list); }
+        list.append(add('li', t.replace(/^[-•*]\s+/, '')));
+        continue;
+      }
+      list = null;
+      if (!t) continue;
+      if (/^#{1,6}\s/.test(t)) box.append(add('h3', t.replace(/^#+\s*/, '')));
+      else if (/^\*\*[^*]+:\*\*/.test(t)) box.append(add('div', t, 'fact'));
+      else box.append(add('p', t));
+    }
+  }
 
   function render() {
     const job = jobs[index];
@@ -82,30 +152,78 @@
       b.textContent = job.completeness + ' description';
       $('meta').append(b);
     }
-    $('description').textContent = job.description;
+    const posting = $('posting');
+    const url = /^https?:\/\//i.test(job.url ?? '') ? job.url : null;
+    posting.textContent = url ? 'Open the original posting ↗' : 'No posting link stored';
+    if (url) posting.href = url; else posting.removeAttribute('href');
+    renderPosting(job);
     $('resume').textContent = resumes[job.resumeId]?.text ?? '(resume not exported)';
     const current = labels[job.jobId]?.tier;
     document.querySelectorAll('.tiers button').forEach((b) =>
       b.classList.toggle('on', b.dataset.tier === current));
+    const deal = labels[job.jobId]?.dealbreaker;
+    document.querySelectorAll('.deal button').forEach((b) =>
+      b.classList.toggle('on', b.dataset.deal === deal?.kind));
+    $('note').value = labels[job.jobId]?.note ?? '';
     const count = Object.keys(labels).length;
+    // Batch 1 was labelled before the dealbreaker field existed, so a blank
+    // there means not reviewed yet; in later batches blank means none.
+    const toReview = (j) => !j.batch && labels[j.jobId] && !labels[j.jobId].dealbreaker;
+    const open = jobs.filter(toReview).length;
     $('progress').innerHTML = `Job ${index + 1} of ${jobs.length} · ` +
-      (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`);
+      (count === jobs.length ? `<span class="done">all ${count} labelled</span>` : `${count} labelled`) +
+      (open ? ` · ${open} first-batch jobs to review` : '');
     window.scrollTo(0, 0);
   }
 
-  async function label(tier) {
-    const job = jobs[index];
-    const same = labels[job.jobId]?.tier === tier;
+  async function save(body) {
     const res = await fetch('/api/label', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.jobId, tier: same ? null : tier }),
+      body: JSON.stringify({ jobId: jobs[index].jobId, ...body }),
     });
-    if (!res.ok) { alert('Save failed: ' + await res.text()); return; }
+    if (!res.ok) { alert('Save failed: ' + await res.text()); return false; }
+    return true;
+  }
+  const advance = () => { if (index < jobs.length - 1) index++; };
+
+  // Clicking the current tier again deletes the whole label. A tier click
+  // moves on; a blank dealbreaker counts as none.
+  async function label(tier) {
+    const job = jobs[index];
+    const same = labels[job.jobId]?.tier === tier;
+    const note = $('note').value.trim();
+    if (!await save(same ? { tier: null } : { tier, note })) return;
     if (same) delete labels[job.jobId];
-    else labels[job.jobId] = { tier };
-    if (!same && index < jobs.length - 1) index++;
+    else labels[job.jobId] = { dealbreaker: { kind: 'none' }, ...labels[job.jobId], tier, ...(note ? { note } : {}) };
+    if (!same && !note) delete labels[job.jobId].note;
+    if (!same) advance();
     render();
+  }
+
+  // 'none' moves on when the job has a tier. Any other kind stays, so you can
+  // add a reason and re-tier as if eligible. Clicking the current kind clears it.
+  async function dealbreaker(kind) {
+    const job = jobs[index];
+    const same = labels[job.jobId]?.dealbreaker?.kind === kind;
+    const value = same ? null : { kind };
+    if (!await save({ dealbreaker: value })) return;
+    const next = { ...labels[job.jobId] };
+    // The server stores a cleared dealbreaker on a tiered label as none.
+    if (same) next.dealbreaker = next.tier ? { kind: 'none' } : undefined; else next.dealbreaker = value;
+    if (!next.dealbreaker) delete next.dealbreaker;
+    labels[job.jobId] = next;
+    if (!same && kind === 'none' && next.tier) advance();
+    render();
+  }
+
+  // A reason typed before the tier is saved by the tier click instead.
+  async function saveNote() {
+    const label = labels[jobs[index].jobId];
+    if (!label?.tier) return;
+    const note = $('note').value.trim();
+    if (note === (label.note ?? '')) return;
+    if (await save({ note })) { if (note) label.note = note; else delete label.note; }
   }
 
   const go = (d) => { index = Math.min(jobs.length - 1, Math.max(0, index + d)); render(); };
@@ -121,10 +239,25 @@
   $('prev').onclick = () => go(-1);
   $('next').onclick = () => go(1);
   $('nextOpen').onclick = nextOpen;
+  $('nextReview').onclick = () => {
+    for (let k = 1; k <= jobs.length; k++) {
+      const i = (index + k) % jobs.length;
+      const j = jobs[i];
+      if (!j.batch && labels[j.jobId] && !labels[j.jobId].dealbreaker) { index = i; return render(); }
+    }
+  };
+  document.querySelectorAll('.deal button').forEach((b) =>
+    b.addEventListener('click', () => dealbreaker(b.dataset.deal)));
+  $('note').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { saveNote(); e.target.blur(); }
+  });
+  $('note').addEventListener('blur', saveNote);
   document.addEventListener('keydown', (e) => {
-    if (e.target.closest('summary')) return;
+    if (e.target.closest('summary') || e.target.matches('input')) return;
     const tier = { 1: 'strong', 2: 'good', 3: 'partial', 4: 'weak' }[e.key];
+    const deal = { 0: 'none', l: 'location', m: 'management', o: 'other' }[e.key.toLowerCase()];
     if (tier) label(tier);
+    else if (deal) dealbreaker(deal);
     else if (e.key === 'ArrowLeft') go(-1);
     else if (e.key === 'ArrowRight') go(1);
   });

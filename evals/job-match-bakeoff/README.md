@@ -95,6 +95,37 @@ The export writes these files to `.data/` (outside git):
 
 ### 3. Label the jobs
 
+To add a further batch of jobs to label, run
+`npm run bakeoff:export -- --more 60`. This command adds jobs that are not
+in `label-jobs.json` yet, with or without a stored match. It takes an equal
+number from each jobscout fit verdict (strong, stretch, possible, none), so the
+sample has more strong candidates than the database has. It appends to
+`label-jobs.json`, `cases.json` and `resumes.json` and sets `batch` on each
+new job. It does not change labels that you already gave. A new batch has no
+Claude baseline. The next bake-off run includes all cases.
+
+To remove role kinds that you no longer target, edit `OUT_OF_SCOPE` in
+`export.ts` and run `npm run bakeoff:export -- --mark-scope`. The command sets
+`excluded` on each label job whose title matches. The labelling page and the
+report skip these jobs. Their labels stay in `labels.json`. `--more` does not
+pick out-of-scope jobs.
+
+Optional: format the job text for easier reading first.
+
+```bash
+npm run bakeoff:format
+```
+
+This step sends each job description to `deepseek-flash` (thinking off) one
+time. The model changes the layout to headings, lists and key facts. It does
+not change the words. It also removes the jobscout note at the start, because
+that note has a fit score that can change your label. The script adds
+`formatted` and `coverage` to `label-jobs.json`. `coverage` is the part of the
+original words that the formatted text keeps. The page shows a warning when
+`coverage` is less than 0.85, and it always shows the raw text in a collapsed
+section. Only the labelling page uses this text. The bake-off prompts use the
+original text. The cost for 40 jobs is approximately USD 0.01.
+
 ```bash
 npm run bakeoff:label
 ```
