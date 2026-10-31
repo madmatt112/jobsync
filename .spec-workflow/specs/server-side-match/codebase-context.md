@@ -102,3 +102,44 @@
 - __tests__/AiSettings.spec.tsx — settings component tests.
 - __tests__/rateLimitBuckets.spec.ts — rate limiter bucket tests.
 - e2e/mcp-write-tools.spec.ts — MCP write tools end-to-end.
+
+## Design phase — job writes and inputs
+- src/lib/jobs/createJobFromNames.ts:26-43 — CreateJobFromNamesInput.
+- src/lib/jobs/createJobFromNames.ts:58-75 — input destructured; unknown fields ignored.
+- src/lib/jobs/updateJobFromNames.ts:25-53 — UpdateJobFromNamesInput and result with descriptionChanged.
+- src/lib/mcp/tools/addJob.ts:62 — upsertExisting strips upsert and allowDuplicate.
+- src/lib/mcp/tools/addJob.ts:27-36 — duplicate reply without upsert.
+- src/models/mcp.schema.ts:325-336 — batch input: items use McpAddJobInputShape and McpAddJobSchema.
+- src/lib/agent/resumeLookup.ts:6-9 — ResumeLookup statuses ok, needs_selection, no_resumes.
+- src/lib/utils.ts:43-60 — handleError returns the error message.
+- src/lib/db.ts:12-18 — Prisma client held on globalThis outside production.
+- src/lib/mcp/rate-limit.ts:13-19 — configuredMax and MAX from MCP_RATE_LIMIT_MAX.
+- src/lib/api-key-resolver.ts:34 — env-var fallback for provider keys.
+- src/actions/automation/analyze.ts:100 — on-demand analysis uses SURFACES.JOB_MATCH.
+- src/lib/telemetry/span.ts:101-104 — withSpan signature.
+
+## Design phase — settings UI
+- src/app/dashboard/settings/page.tsx:25 — "ai-provider" section renders AiSettings.
+- src/components/ui/switch.tsx:8-29 — Switch component.
+- src/actions/userSettings.actions.ts:12-46 — getUserSettings merges stored over defaults.
+- src/actions/userSettings.actions.ts:68-72 — ai merge spreads stored ai under the patch.
+
+## Design phase — backup
+- src/lib/backup/schema.ts:191-216 — Job backup row schema.
+- src/lib/backup/export.ts:109 — BackupDataSchema.parse strips unlisted columns.
+
+## Design phase — library probes
+- node_modules/ai/package.json:3 — ai 6.0.256.
+- node_modules/ai/dist/index.d.ts:107 — FinishReason union.
+- node_modules/ai/dist/index.d.ts:1361 — generateText signature (abortSignal, providerOptions).
+- node_modules/ai/dist/index.d.ts:1390 — generateText providerOptions field.
+- node_modules/ai/dist/test/index.d.ts:53-70 — MockLanguageModelV3 with doGenerateCalls.
+- node_modules/@ai-sdk/provider/dist/index.d.ts:1467 — call options carry providerOptions.
+- node_modules/p-limit/package.json:3 — p-limit 7.3.0.
+- node_modules/p-limit/index.d.ts:89 — pLimit(concurrency).
+
+## Design phase — tests and fixtures
+- __tests__/agentNestedStreamSpike.spec.ts:2 — MockLanguageModelV3 imported from ai/test.
+- __tests__/AiSettings.spec.tsx:6-9 — userSettings.actions mocked with two functions.
+- __tests__/mcpAddJob.spec.ts:10-34 — module mocks; no settings mock.
+- e2e/mcp-write-tools.spec.ts:15-32 — FULL_POSTING fixture.

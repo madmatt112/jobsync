@@ -30,3 +30,7 @@
 {"ts":"2026-10-31T01:59:30.808Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-checker","input":"14","output":"2995","cacheWrite":"60965","cacheRead":"305993","tokens":"369967","cacheWrite5m":"0","cacheWrite1h":"60965","model":"claude-sonnet-5"}
 {"ts":"2026-10-31T01:59:30.808Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-checker","role":"narrow check v3","result":"success","phase":"requirements"}
 {"ts":"2026-10-31T01:59:30.909Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.end","phase":"requirements","result":"approved","state":"v3","note":"3 rounds"}
+{"ts":"2026-10-31T01:59:30.991Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.start","phase":"design","mode":"normal","state":"v0"}
+{"ts":"2026-10-31T01:59:30.993Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.start","agent":"sdd-drafter","role":"draft v1","model":"claude-opus-5-5","effort":"high"}
+{"ts":"2026-10-31T02:07:39.476Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-drafter","input":"94","output":"47178","cacheWrite":"164370","cacheRead":"5231486","tokens":"5443128","cacheWrite5m":"0","cacheWrite1h":"164370","model":"claude-opus-5-5"}
+{"ts":"2026-10-31T02:07:39.476Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-drafter","role":"draft v1","result":"success","phase":"design","round":"1"}
