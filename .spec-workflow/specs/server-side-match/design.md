@@ -10,14 +10,14 @@ JobSync scores MCP-added jobs itself: an MCP add or description update, with the
 The steering files tech.md and structure.md do not exist; the design follows the patterns the touched code already uses: in-memory per-user windows (`src/lib/mcp/rate-limit.ts:23-49`), `generateText` inside `withSpan` (`src/actions/automation/analyze.ts:92-127`), and `p-limit` for concurrency (`src/lib/scraper/automation-run/aiSettings.ts:18-24`).
 
 ### Project Structure (structure.md)
-New server-match files go in `src/lib/mcp/serverMatch/` because only MCP handlers enqueue; the shared match write goes in `src/lib/jobs/` beside `createJobFromNames`, which is the non-action home for job writes that take a user id.
+New server-match files go in `src/lib/mcp/serverMatch/` because only MCP handlers enqueue; the shared match write goes in `src/lib/jobs/` beside `createJobFromNames`.
 
 ### Design System (design-system.md) — if applicable
-N/A — the project has no design-system.md. The one new control reuses `Switch` (`src/components/ui/switch.tsx:8-29`) and `Label`, as `AiSettings.tsx` uses `Label` and `Select` (`src/components/settings/AiSettings.tsx:16-23`).
+N/A — no design-system.md. The one new control reuses `Switch` (`src/components/ui/switch.tsx:8-29`) and `Label`.
 
 ## Architecture
 
-The MCP handlers stop calling `buildMatchOffer` directly and call `resolveMatchReply`, which returns the base offer unchanged when the setting is off, and otherwise enqueues a match and returns a "queued" reply. The queue holds one entry per job, takes a per-user budget unit, passes an Ollama gate and a process-wide limiter, and then calls `runServerMatch`, which does the load, preprocess, generate, parse and save steps. A failed run writes a reason and time on the job; `get_job` shows it until a newer match exists.
+The MCP handlers call `resolveMatchReply` instead of `buildMatchOffer`: it returns the base offer when the setting is off, else enqueues a match and returns a "queued" reply. The queue holds one entry per job and runs `runServerMatch` (load, preprocess, generate, parse, save) under a per-user budget, Ollama gate and process-wide limiter. A failed run writes a reason and time that `get_job` shows until a newer match exists.
 
 ```mermaid
 graph TD
@@ -86,7 +86,7 @@ graph TD
   - `handleAddJob` (`src/lib/mcp/tools/addJob.ts:8-46`) calls `resolveMatchReply(result.jobId, userId, result.descriptionCompleteness ?? "title-only", "add", input.skipMatch)` in place of `buildMatchOffer`. `createJobFromNames` destructures its input (`src/lib/jobs/createJobFromNames.ts:54-75`), so the extra field is ignored there.
   - `upsertExisting` (`src/lib/mcp/tools/addJob.ts:57-78`) strips `skipMatch` with `upsert` and `allowDuplicate` at line 62. On a changed description it calls `resolveMatchReply(..., "update", input.skipMatch)` (Req 4.3, 8.5).
   - `handleUpdateJob` (`src/lib/mcp/tools/updateJob.ts:7-37`) calls `resolveMatchReply(..., "update")` with no skip flag; `update_job` gets no `skipMatch` (requirements D4).
-  - These replies stay as at base: the duplicate path (`src/lib/mcp/tools/addJob.ts:27-36`), the not-updated and description-unchanged paths, the rate-limit replies, and `handleGetJob` with `matchDirective` (Req 4.8, 4.9, invariants). `handleAddJobsBatch` needs no edit; each item goes through `handleAddJob` and its labelled line carries that item's reply (Req 4.4).
+  - These replies stay as at base: the duplicate path (`src/lib/mcp/tools/addJob.ts:27-36`), the not-updated and description-unchanged paths, the rate-limit replies, and `handleGetJob` with `matchDirective` (Req 4.8, 4.9, invariants; `skipMatch` does not alter them — D13). `handleAddJobsBatch` needs no edit; each item goes through `handleAddJob` and its labelled line carries that item's reply (Req 4.4).
   - `MCP_TOOL_DESCRIPTIONS` (`src/lib/mcp/toolDescriptions.ts:5-32`): `add_job` and `add_jobs_batch` each append "The reply carries a match directive, or states that the match is queued when server-side matching is on. Pass skipMatch: true to skip scoring a job." `update_job` changes "requests a fresh match analysis" to "requests a fresh match analysis: the reply carries a match directive, or states that the match is queued when server-side matching is on" (Req 4.12).
 
 ### C6 — Server match run (`runServerMatch`)
@@ -128,7 +128,7 @@ graph TD
   - At most one run per job at a time and at most one pending (Req 4.10, requirements D14).
 - **`drive(key)`:**
   1. Loop: `takeServerMatchBudget(userId)`. If not allowed, sleep `resetIn` ms and try again. Over-budget matches wait and never fail for that reason (Req 6.4, requirements D11), and the wait holds no limiter slot.
-  2. If the provider is `AiProvider.OLLAMA`, run through `ollamaGate`, then `limiter`; otherwise only through `limiter`. Total in flight is at most the constant and Ollama in flight is at most 1 (Req 6.1).
+  2. If the provider is `AiProvider.OLLAMA`, run through `ollamaGate`, then `limiter`; otherwise only through `limiter`. Total in flight is at most the constant and Ollama in flight is at most 1 (Req 6.1). This bound covers server matches only; `ollamaGate` does not coordinate with the automation runner's or in-app Match's Ollama use, so cross-surface Ollama concurrency is unchanged and pre-dates this spec.
   3. Set `state = "running"` and `await runServerMatch(task)` inside try/catch. A throw is logged and treated as a failure (NFR: one failure does not stop the others).
   4. On finish: if `rerun`, set `rerun = false` and `state = "queued"` and loop from step 1; otherwise delete the entry.
 - **Process:** the state is in memory; a restart drops it with no failure record (NFR reliability, requirements D2).
@@ -154,7 +154,6 @@ ALTER TABLE "Job" ADD COLUMN "serverMatchFailedAt" DATETIME;
 The backup Job row schema (`src/lib/backup/schema.ts:191-216`) is not extended, and `BackupDataSchema.parse` (`src/lib/backup/export.ts:109`) strips the columns from a backup. A restore therefore drops failure records (D9).
 
 ### matchData written by a server match
-Illustrative — verify against the test fake:
 ```
 { matchScore, recommendation, body,            // from parseJobMatch
   resumeId, resumeTitle,                       // resolved resume
@@ -176,11 +175,11 @@ This fits `JobMatchData` (`src/models/ai.schemas.ts:60-76`) with no type change.
 
 ## Error Handling
 
-1. **Settings read throws (corrupt JSON):** read as off; the reply is the base offer and the add does not fail.
-2. **Run failures (provider, timeout, finish reason, no scores, unreadable input):** C6 records the reason; the reply was "queued" already and the existing match stays (Req 7.1, 7.2).
-3. **Job deleted:** C6 ends as `"dropped"`, with no record and no error line (Req 7.6).
-4. **Unexpected throw inside `drive`:** caught and logged; the entry is cleared or re-run and other entries continue.
-5. **Process restart:** the queue is lost; re-score with `get_job` and `matchDirective: true` or the in-app Match.
+1. **Settings read throws (corrupt JSON):** read as off; base reply, the add does not fail.
+2. **Run failure (provider, timeout, finish reason, no scores, unreadable input):** C6 records the reason; the "queued" reply already returned and the existing match stays (Req 7.1, 7.2).
+3. **Job deleted:** C6 ends `"dropped"` — no record, no error line (Req 7.6).
+4. **Unexpected throw in `drive`:** caught and logged; the entry clears or re-runs, others continue.
+5. **Process restart:** the queue is lost; re-score with `get_job` + `matchDirective: true` or in-app Match.
 
 ## Testing Strategy
 
@@ -225,7 +224,7 @@ No test calls a real provider. Each generation test stubs `getModel` (`vi.mock("
     - the note cases (Req 4.6);
     - no model (Req 4.7);
     - the duplicate and unchanged paths (Req 4.8);
-    - `skipMatch` on add, on upsert and on batch items (Req 8.2-8.5);
+    - `skipMatch` on add, on upsert and on batch items, and a duplicate-without-upsert add with `skipMatch` that keeps its base reply (Req 8.2-8.5, D13);
     - per-item lines in a batch (Req 4.4).
   - One end-to-end handler test runs `handleAddJob` → real queue → `runServerMatch` with the mock model. It awaits `whenServerMatchIdle()` and asserts that the write happened after the reply resolved (Req 4.11).
 - **End-to-end:** `e2e/mcp-server-match.spec.ts` (new) uses no provider call:
@@ -236,21 +235,21 @@ No test calls a real provider. Each generation test stubs `getModel` (`vi.mock("
 
 ## Decisions taken in this document
 
-- D1 — Setting storage: an optional flag inside the stored ai settings; options were a new top-level settings key or a new column; chosen because the MCP path already reads ai settings by user id with no session, and the existing merge keeps the flag across a model save.
-- D2 — Setting control: a separate switch component under the AI provider form that saves on toggle; options were a field inside the existing form saved with its Save button, or a new settings section; chosen because the provider form's Save is disabled with no model selected, and a separate component keeps the form's tests untouched.
-- D3 — Reply decision placement: a new wrapper that calls the existing offer builder unchanged; options were editing the offer builder or branching in each handler; chosen because the setting-off reply then is the base function's output by construction.
-- D4 — Limiter shape: one process-wide limiter at the concurrency constant plus a one-slot gate for Ollama tasks in front of it; options were two separate limiters, or one limiter whose size follows the provider; chosen because users can have different providers, and this holds both bounds at once.
-- D5 — Budget size: equal to the configured MCP hourly budget, including its environment override; options were a fixed constant or a separate environment variable; chosen because every queued match follows one MCP unit, so this keeps the requirement's floor even when the operator raises the MCP budget.
-- D6 — Over-budget wait happens before the limiter slot is taken; options were waiting inside the slot; chosen because a waiting user must not block other users' matches for up to an hour.
-- D7 — Failure record: two nullable job columns, shown when no match is newer, by timestamp; options were a field inside the match data, a separate failure table, or clearing the columns on every match write; chosen because the timestamp rule covers every surface without touching their writes, and match data stays untouched on failure.
-- D8 — Shared write: extract the session-free user-scoped update and have the session action call it; options were calling the action from the background or copying the update; chosen because the background run has no session and the requirement asks for the same write.
-- D9 — Backups do not carry the failure columns; options were extending the backup row schema; chosen because a failure record is transient and is redone by a re-score.
-- D10 — No end-to-end run of the queued path; options were an end-to-end test with a stubbed provider endpoint; chosen because the key resolver's environment fallback could reach a real provider, which the testing requirement forbids, and the handler-to-save path is covered with a mock model.
-- D11 — Telemetry surface: reuse the job-match surface value; options were adding a seventh value; chosen because the surfaces set is closed at six and the on-demand analysis already uses this value for the same prompt.
-- D12 — Saved surface value is "server"; options were "mcp-server" or "background"; chosen because it is short and differs from both "chat" and the "mcp" marker.
-- D13 — Skipped text only where an offer would otherwise be composed: a duplicate without upsert, an unchanged description, and the error paths keep their base reply; options were appending the skipped text to every add reply; chosen because no match was on offer in those paths, and the requirements fix those replies at base.
-- D14 — Model and provider are taken at enqueue time, and a newer enqueue replaces them on a pending entry; options were re-reading settings at run time; chosen because the Ollama gate needs the provider before the run starts.
-- D15 — Retired DeepSeek enum members are removed rather than kept as hidden aliases; options were keeping them in the enum and filtering the list; chosen because no code references them and the fallback list derives from the enum.
+- D1 — Setting storage: an optional flag inside the stored ai settings; chosen because the MCP path already reads ai settings by user id with no session, and the existing merge keeps the flag across a model save.
+- D2 — Setting control: a separate switch component under the AI provider form that saves on toggle; chosen because the provider form's Save is disabled with no model selected, and a separate component keeps the form's tests untouched.
+- D3 — Reply decision placement: a new wrapper that calls the existing offer builder unchanged; chosen because the setting-off reply then is the base function's output by construction.
+- D4 — Limiter shape: one process-wide limiter at the concurrency constant plus a one-slot gate for Ollama tasks in front of it; chosen because users can have different providers, and this holds both bounds at once.
+- D5 — Budget size: equal to the configured MCP hourly budget, including its environment override; chosen because every queued match follows one MCP unit, so this keeps the requirement's floor even when the operator raises the MCP budget.
+- D6 — Over-budget wait happens before the limiter slot is taken; chosen because a waiting user must not block other users' matches for up to an hour.
+- D7 — Failure record: two nullable job columns, shown when no match is newer, by timestamp; chosen because the timestamp rule covers every surface without touching their writes, and match data stays untouched on failure.
+- D8 — Shared write: extract the session-free user-scoped update and have the session action call it; chosen because the background run has no session and the requirement asks for the same write.
+- D9 — Backups do not carry the failure columns; chosen because a failure record is transient and is redone by a re-score.
+- D10 — No end-to-end run of the queued path; chosen because the key resolver's environment fallback could reach a real provider, which the testing requirement forbids, and the handler-to-save path is covered with a mock model.
+- D11 — Telemetry surface: reuse the job-match surface value; chosen because the surfaces set is closed at six and the on-demand analysis already uses this value for the same prompt.
+- D12 — Saved surface value is "server"; chosen because it is short and differs from "chat" and the "mcp" marker.
+- D13 — Skipped text is emitted only on the add/update paths that reach `resolveMatchReply` (C4 step 1); the paths that return before it — a duplicate without upsert (`addJob.ts:27-36`), an unchanged description (`addJob.ts:65-67`), the rate-limit reply (`addJob.ts:14-18`) and the `catch` error reply — keep their base reply. Chosen because `skipMatch:true` never reaches `enqueueServerMatch` on those paths, so Req 8.2's no-queue guarantee holds everywhere and no match was on offer to skip; this scopes Req 8.3's skipped text to the offer paths, with Req 4.8 governing the early returns.
+- D14 — Model and provider are taken at enqueue time, and a newer enqueue replaces them on a pending entry; chosen because the Ollama gate needs the provider before the run starts.
+- D15 — Retired DeepSeek enum members are removed rather than kept as hidden aliases; chosen because no code references them and the fallback list derives from the enum.
 
 ## Scope notes
 
@@ -267,5 +266,9 @@ No test calls a real provider. Each generation test stubs `getModel` (`vi.mock("
 
 ## Revision History
 
+- **v2** (2026-10-31) — Round-1 adversarial response (adversarial-analysis-design.md, verdict iterate 0/1/2).
+  - **R1-1 — Partially accepted (SHOULD_FIX).** Rewrote D13 to scope the skipped text to the paths that reach the reply decision; the early returns — duplicate without upsert, unchanged description, rate-limit and error — keep their base reply, since skip never reaches the enqueue there and no match was on offer. This scopes Req 8.3 to the offer paths while Req 8.2's no-queue holds everywhere; added a duplicate-with-skip integration case and noted the same scoping on the C5 bullet.
+  - **R1-2 — Accepted (MINOR).** Dropped the matchData illustrative hedge and committed the shape.
+  - **R1-3 — Accepted (MINOR).** Added a note that the Ollama-one bound covers server matches only, not the automation runner's or in-app Match's Ollama use.
 - **v1** (2026-10-30) — Initial draft.
   - **Lint pass.** 13 fixed. Rejected: L-3,5,6,7,8,38,39 @-scoped node_modules paths resolve on the real tree (linter artifact); L-10,13,15,18,21,31,34,36 new identifiers this design adds; L-12,14,20,22,23,24,25,30,32,33,37,40 builtins or symbols cited elsewhere.
