@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "header": "Posture",
+      "question": "What is the money, personal-data-and-erasure, and legal posture of server-side matching (refunds/forfeiture, credits, compliance framing)?",
+      "options": [
+        "Opt-in, the user's own provider key and spend bounded by the match budget; no JobSync billing so no refunds, credits or forfeiture; resume and posting go to the provider the user already chose; the match lives on the job row and is erased with it",
+        "On by default for MCP users",
+        "A separate JobSync-billed match service"
+      ]
+    },
+    {
+      "header": "Queue",
+      "question": "Where does the server-side match queue live?",
+      "options": [
+        "In-process queue that a restart drops",
+        "Database-backed queue that survives restarts",
+        "A job on the existing cron scheduler"
+      ]
+    },
+    {
+      "header": "Failures",
+      "question": "How is a failed server-side match recorded?",
+      "options": [
+        "Reason and time on the job, shown by get_job, plus a log line",
+        "Log line only",
+        "Failure body written into the match data"
+      ]
+    },
+    {
+      "header": "skipMatch",
+      "question": "When does the per-job skipMatch flag apply?",
+      "options": [
+        "Honour it whatever the setting",
+        "Honour it only when the setting is on",
+        "Ignore it and leave skipping to jobscout"
+      ]
+    },
+    {
+      "header": "Queued reply",
+      "question": "When does the MCP reply say the match is queued?",
+      "options": [
+        "Check the existing note conditions and a configured model before queuing",
+        "Queue always and record a failure later",
+        "Queue always and say nothing"
+      ]
+    }
+  ]
+}

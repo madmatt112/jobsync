@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-read-tools/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-09-21T21:43:41.691Z",
+      "trigger": "initial",
+      "approvalId": "approval_1790027021686_q888wtcb6",
+      "approvalTitle": "Design v2: MCP read tools (post adversarial round 1)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-09-21T21:45:27.619Z",
+      "trigger": "approved",
+      "approvalId": "approval_1790027021686_q888wtcb6",
+      "approvalTitle": "Design v2: MCP read tools (post adversarial round 1)"
+    }
+  ]
+}

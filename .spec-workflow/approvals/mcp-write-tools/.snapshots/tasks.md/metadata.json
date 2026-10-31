@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-write-tools/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-10-07T00:16:11.605Z",
+      "trigger": "initial",
+      "approvalId": "approval_1791332171599_pboqadig5",
+      "approvalTitle": "mcp-write-tools tasks v3"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-10-07T00:16:20.258Z",
+      "trigger": "approved",
+      "approvalId": "approval_1791332171599_pboqadig5",
+      "approvalTitle": "mcp-write-tools tasks v3"
+    }
+  ]
+}

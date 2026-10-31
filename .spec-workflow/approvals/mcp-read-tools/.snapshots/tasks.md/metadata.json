@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-read-tools/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-09-21T21:49:38.796Z",
+      "trigger": "initial",
+      "approvalId": "approval_1790027378790_vzxjir0s0",
+      "approvalTitle": "Tasks: MCP read tools — 22 tasks across 3 upstream PRs + fork-only work"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-09-21T22:03:26.572Z",
+      "trigger": "approved",
+      "approvalId": "approval_1790027378790_vzxjir0s0",
+      "approvalTitle": "Tasks: MCP read tools — 22 tasks across 3 upstream PRs + fork-only work"
+    }
+  ]
+}

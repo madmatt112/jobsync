@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/mcpSaveCoverLetter.spec.ts"],"seams":{"__tests__/mcpSaveCoverLetter.spec.ts":"handleSaveCoverLetter(input, userId)"},"redCommit":"08f850b","baseSha":"bd534d896ff6f02eca5b5677b3067e191dfffe7f","base":"inconclusive","head":"not-run","amended":false,"judged":null}

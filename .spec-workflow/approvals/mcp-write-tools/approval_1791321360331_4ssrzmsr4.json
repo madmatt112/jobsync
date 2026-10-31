@@ -1,0 +1,12 @@
+{
+  "id": "approval_1791321360331_4ssrzmsr4",
+  "title": "mcp-write-tools design v4",
+  "filePath": ".spec-workflow/specs/mcp-write-tools/design.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-10-06T21:16:00.331Z",
+  "category": "spec",
+  "categoryName": "mcp-write-tools",
+  "response": "v4; 4 review rounds; final verdict MUST_FIX 0 / SHOULD_FIX 1 / MINOR 1; rulings: none; cap: SHOULD_FIX-only pass at v4, VERIFIED 2/2",
+  "respondedAt": "2026-10-06T21:16:37.496Z"
+}

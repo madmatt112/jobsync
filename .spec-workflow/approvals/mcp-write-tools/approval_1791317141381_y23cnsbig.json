@@ -1,0 +1,12 @@
+{
+  "id": "approval_1791317141381_y23cnsbig",
+  "title": "mcp-write-tools requirements v6",
+  "filePath": ".spec-workflow/specs/mcp-write-tools/requirements.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-10-06T20:05:41.381Z",
+  "category": "spec",
+  "categoryName": "mcp-write-tools",
+  "response": "v6; revision of approved v4 to add R8 (one match method on every surface) and R9 (jobscout wire contract). 1 review round this run: r5 iterate MUST_FIX 1 / SHOULD_FIX 3 / MINOR 2. Cap hit (D>=4, MUST_FIX rose 0->1 after the v5 revision), so post-cap corrective pass produced v6, adjudicating R5-1..R5-4 (all fixed, none ruled out); narrow check VERIFIED 4/4. Rulings: none. MINOR carried: R5-5 (in-app Match prompt change vs Introduction framing) and R4-1 (userId create-ownership as a where invariant), both to design.",
+  "respondedAt": "2026-10-06T20:05:51.483Z"
+}

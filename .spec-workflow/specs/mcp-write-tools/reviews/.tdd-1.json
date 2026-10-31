@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/updateJobFromNames.spec.ts","__tests__/mcpUpdateJob.spec.ts","__tests__/mcpAddJob.spec.ts"],"seams":{"__tests__/updateJobFromNames.spec.ts":"updateJobFromNames(input, userId)"},"redCommit":"0e397ade4990cfdc102512eda20359ef93ea2d22","baseSha":"658e0ada57b01e15af9c9bfaf9d0b21b938e669d","base":"inconclusive","head":"not-run","amended":false,"judged":null}

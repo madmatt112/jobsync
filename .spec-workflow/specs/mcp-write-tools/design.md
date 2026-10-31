@@ -1,0 +1,215 @@
+# Design Document
+
+Document version: v4
+
+## Overview
+
+This design removes the `createdVia` gate from the two MCP job writes, adds a `save_cover_letter` tool and an `added` field on list and search rows, and rebuilds the MCP match directive on the in-app Match prompt with an optional `matchDirective` flag on `get_job` for re-scoring. All changes sit in the MCP layer (`src/app/api/mcp/route.ts`, `src/lib/mcp/`, `src/models/mcp.schema.ts`) plus the shared job-match system prompt and `wiki/mcp.md`. It reuses the in-app job and resume lookups (`src/lib/agent/jobLookup.ts:12-27`, `src/lib/agent/resumeLookup.ts:44-90`), the preprocessors, `buildCoverLetterTitle`, and the create-then-repoint transaction of `src/actions/coverLetter.actions.ts:194-205`.
+
+## Steering Document Alignment
+
+### Technical Standards (tech.md)
+The steering directory is empty, so the design follows the patterns of the existing MCP tools: a Zod shape per tool, a scope gate and `safeParse` in the router, and a handler that takes the rate-limit unit first and returns text (`src/app/api/mcp/route.ts:189-210`).
+
+### Project Structure (structure.md)
+No structure.md exists; the new handler goes in `src/lib/mcp/tools/saveCoverLetter.ts` beside its peers, and the new shape goes in `src/models/mcp.schema.ts`.
+
+### Design System (design-system.md) — if applicable
+N/A. The spec has no new visual surface; the saved letter renders in the existing Cover Letter tab.
+
+## Architecture
+
+The change has four seams. (1) Ownership: every job write keeps `id` and `userId` in its `where` and drops `createdVia`; one exported not-found constant replaces the two MCP-eligibility strings. (2) Cover letters: a new handler runs the job read, profile find-or-create, title read, letter create and job repoint in one Prisma interactive transaction. (3) Rows: `formatJobRow` appends one field. (4) Match method: `buildMatchOffer` loads the job and resume the way in-app Match does, and `buildMatchDirective` wraps the shared system prompt and user prompt between the kept opening line and the kept `save_match_result` call-back; `get_job` gets a flag that appends the same offer.
+
+```mermaid
+graph TD
+    A[add_job / add_jobs_batch] --> O[buildMatchOffer]
+    U[update_job] --> O
+    G[get_job matchDirective] --> O
+    O --> J[resolveJobForAgent]
+    O --> R[resolveResumeForAgent]
+    O --> P[preprocessJob + preprocessResume]
+    O --> D[buildMatchDirective]
+    D --> S[JOB_MATCH_SYSTEM_PROMPT + buildJobMatchPrompt]
+    D --> N[neutraliseBatchPrefix]
+    S --> M[in-app match_job and automation analyze]
+```
+
+## Components and Interfaces
+
+### C1 — Ownership-only job writes
+- **Purpose:** R1, R2.
+- **Interfaces:** `src/lib/jobs/updateJobFromNames.ts` exports `JOB_NOT_FOUND_MESSAGE = "Job not found or not owned by this token's user."`, replacing the private `NOT_FOUND_MESSAGE` (`:55-57`). The pre-check `where` (`:67-70`) and the transaction update `where` (`:190-193`) become `{ id: jobId, userId }`. In `src/lib/mcp/tools/saveMatchResult.ts` the completeness read (`:67-70`) and the update (`:86-93`) use `{ id: input.jobId, userId }`, and the P2025 branch (`:95-104`) returns `JOB_NOT_FOUND_MESSAGE`. The comment at `:65-66` stays true.
+- **Post-conditions:** an id owned by another user and a nonexistent id return the same constant from one query path (R1 AC3, R2 AC4). The `add_job` upsert path (`src/lib/mcp/tools/addJob.ts:57-78`) needs no edit; it inherits the change (R1 AC2). No write sets `createdVia` (R1 AC4, already true). `save_match_results_batch` inherits through `handleSaveMatchResult` (R2 AC5). No discovery-status gate exists in `updateJobFromNames` — the `where` keys only on `id`, `userId` and `createdVia` — so a dismissed or other discovery job updates once `createdVia` is dropped (R1 AC6).
+- **Dependencies:** none new.
+- **Reuses:** the existing P2025 mapping at `src/lib/jobs/updateJobFromNames.ts:195-205`.
+
+### C2 — Agent-facing text
+- **Purpose:** R3 AC1-AC3, AC5; R7 AC5; R8 AC4 discoverability.
+- **Interfaces:** `src/lib/mcp/toolDescriptions.ts` gains a `save_cover_letter` key and edits four entries. Illustrative wording, to be verified against the eval fixtures:
+  - `update_job`: "Correct or enrich any job the user owns. Only the fields you supply change. …" (the rest of `:17` unchanged).
+  - `save_match_result`: "Persist a job-fit match analysis (produced by you, the agent) against any job the user owns. Call this after add_job, update_job or get_job hands you a match directive."
+  - `get_job`: append "Pass matchDirective: true to also get a match directive, so you can re-score the job without editing it."
+  - `list_jobs`: say each line ends with the date the job was added.
+  - `save_cover_letter`: "Save a cover letter you wrote yourself for a job the user owns. Send the full letter as Markdown. Each call stores a new version and points the job at it; earlier versions stay in the user's documents in Profile."
+- `McpUpdateJobInputShape.jobId` describe (`src/models/mcp.schema.ts:246-251`) drops "Only jobs created through MCP can be updated." and lists the id sources (add_job, find_job, list_jobs, search_jobs, get_job). `McpSaveMatchResultInputShape` describes (`:102`, `:103-109`) say "as given in the match directive" in place of naming add_job.
+- `src/lib/mcp/tools/findJob.ts`: drop `createdVia` from the select (`:36`), drop `updatable` (`:46`), and always emit the `update_job` sentence of `:59-61` (R3 AC3).
+- **Reuses:** `evals/mcp-tools/tools.ts:21-34` picks up descriptions by key; add `save_cover_letter: McpSaveCoverLetterInputShape` to `SHAPES`.
+
+### C3 — `save_cover_letter` tool
+- **Purpose:** R4, R5, R6.
+- **Interfaces:**
+  - `src/models/mcp.schema.ts`: `McpSaveCoverLetterInputShape = { jobId: z.string().min(1), text: z.string().min(1) }` with describes, and `McpSaveCoverLetterSchema = z.object(McpSaveCoverLetterInputShape)`.
+  - `src/app/api/mcp/route.ts`: register `save_cover_letter` after `save_match_results_batch`, with the `jobs:write` gate text and `Validation error: …` branch copied from `:189-210`.
+  - `src/lib/mcp/tools/saveCoverLetter.ts`: `handleSaveCoverLetter(input: z.infer<typeof McpSaveCoverLetterSchema>, userId: string): Promise<{ content: Array<{ type: "text"; text: string }> }>`.
+- **Post-conditions, in order:**
+  1. `checkMcpRateLimit(userId)`; when refused, return `Rate limit exceeded. Try again in Ns.` and write nothing (R6 AC2).
+  2. `const markdown = input.text.trim()`; if `markdown.length < APP_CONSTANTS.MIN_COVER_LETTER_CHARS`, return `Validation error: text must be at least 10 characters after trimming.` (the number is the constant) and write nothing (R4 AC4). Then, before any transaction, `const content = md.render(markdown)`, where `md` is a module-level `new MarkdownIt({ html: false, linkify: false, breaks: true })`, the settings of `src/actions/coverLetter.actions.ts:11` (R4 AC2); that action also renders before its transaction (`:192`), so the SQLite write lock never covers the render (R2-3).
+  3. In one `prisma.$transaction(async (tx) => …)`:
+     a. `tx.job.findFirst({ where: { id: input.jobId, userId }, select: JobTitle label, Company label })`; when null, return a not-found marker with no write.
+     b. `tx.profile.findFirst({ where: { userId } })`; when null, `tx.profile.create({ data: { userId } })` (R4 AC5).
+     c. `tx.coverLetter.findMany({ where: { profile: { userId } }, select: { title: true } })`.
+     d. `title = buildCoverLetterTitle(job.JobTitle?.label ?? "Cover Letter", job.Company?.label ?? "", titles)`, the same arguments as `src/actions/coverLetter.actions.ts:186-190`.
+     e. `tx.coverLetter.create({ data: { profileId: profile.id, title, content } })`, with the `content` rendered in step 2.
+     f. `tx.job.update({ where: { id: input.jobId, userId }, data: { coverLetterId: letter.id } })`.
+  4. Not-found marker, or a P2025 from step f (the transaction rolls back), returns `JOB_NOT_FOUND_MESSAGE` (R4 AC8).
+  5. Success returns one line: `Cover letter saved for job {jobId}: "{title}" (id: {letterId}).` (R4 AC6).
+  6. Any other error returns `Error: {message}` and never throws (R6 AC4).
+- The handler never calls `createCoverLetter` or `generateCoverLetterForJob`; both need a session (`requireUser`). It never updates or deletes an existing letter (R5 AC1) and never compares text (R5 AC4).
+- **Ownership (R6 AC3, carried R4-1):** every read and update carries `userId` in its `where` (steps a, b, c, f). The two creates have no `where`: the profile create owns through `data.userId`, and the letter create owns through `data.profileId`, which comes only from step b's userId-scoped read or create in the same transaction. No raw SQL. Step b's find-or-create is not guarded: `Profile.userId` is not unique (`prisma/schema.prisma:71-77`), so two concurrent first-time calls could each create a profile. This is tolerated, as the same find-then-create race pre-exists in `createResume` (`src/actions/profile/resumeUpload.ts:39-71`), and `getCoverLetterList` reads through `profile: { userId }` so letters stay visible either way; no migration is added (R2-2).
+- **Query bound:** at most six queries per call, independent of version count; step c is the one title read the Performance NFR allows.
+- **Dependencies:** `prisma`, `markdown-it` 14.3 (installed per `./package.json:74`), `buildCoverLetterTitle`, `JOB_NOT_FOUND_MESSAGE`.
+- **Reuses:** `src/lib/coverLetterTitle.ts:7-20`; the transaction shape of `src/actions/coverLetter.actions.ts:194-205`.
+
+### C4 — Date-added row field
+- **Purpose:** R7, R9 AC2.
+- **Interfaces:** `formatJobRow` (`src/lib/mcp/jobQuery.ts:311-324`) appends `` `added ${day(job.createdAt)}` `` as the tenth element, after `sanitize(originLabel(job))`. `day` (`:309`) and `get_job`'s `day` (`src/lib/mcp/tools/getJob.ts:45-46`) both take the first ten characters of `toISOString()`, so the two dates are equal (R7 AC3). `ROW_SELECT` and the two queries stay as they are (R7 AC4).
+
+### C5 — Shared Match prompt additions
+- **Purpose:** R8 AC3.
+- **Interfaces:** `JOB_MATCH_SYSTEM_PROMPT` (`src/lib/ai/prompts/job-match/system.ts:49-50`) keeps its Deal Breakers line and adds three sentences after it. Illustrative wording:
+  - (a) "Always check eligibility here: location or residency, work authorization, language, and security clearance. Name each one the job requires that the resume does not show."
+  - (b) "Use only the resume and the job description. Do not invent employers, skills, titles, dates or credentials that are not in them."
+  - (c) "If the job description is thin or cut short, say so here, call the score provisional, and name what the description leaves out. If you have a tool that can fetch the full posting and update the job, such as update_job, use it first and score the fuller description."
+- **Post-conditions:** the output format (`:24-32`), the section list and the score bands are unchanged, so `parseJobMatch` reads the same SCORES line. The new text contains none of the R9 AC5 phrases and no line starting with the batch prefix.
+- **Surfaces:** the constant is read by in-app `match_job` (`src/lib/agent/tools/matchJob.ts:90`), automation on-demand analysis (`src/actions/automation/analyze.ts:101`, `:114`), the `evals/job-match` prompt, and now the MCP directive. All four change together, by design (carried R5-5).
+
+### C6 — Match directive on the in-app method
+- **Purpose:** R8 AC1, AC2; R9 AC4, AC5; deferred narrow-check items.
+- **Interfaces:**
+  - `buildMatchOffer(jobId: string, userId: string, completeness: DescriptionCompleteness | null, context: "add" | "update" | "rescore"): Promise<{ kind: "directive" | "note"; text: string }>`. The `add` and `update` callers (`src/lib/mcp/tools/addJob.ts:38-43`, `:69-74`, `src/lib/mcp/tools/updateJob.ts:29-34`) are unchanged.
+  - `buildMatchDirective(jobId: string, resumeId: string, normalizedResumeText: string, normalizedJobText: string, completeness: DescriptionCompleteness | null, context: "add" | "update" | "rescore"): string`.
+  - `neutraliseBatchPrefix(text: string): string`, exported from `matchDirective.ts`.
+- **`buildMatchOffer` post-conditions, in order:**
+  1. `completeness === "title-only"` returns the note of `:63-72`; for `add`/`update` unchanged, and for `rescore` its "the job was saved, but no fit analysis was requested" clause reads "this job's stored description is too thin to score" instead, since nothing was just saved. The fetch-the-full-posting-and-call-`update_job` guidance is kept (R1-2).
+  2. `resolveJobForAgent(userId, jobId)`; `no_job` returns note `The job couldn't be loaded for matching.`
+  3. `resolveResumeForAgent(userId, { pageResumeId: job.resumeId ?? undefined })`, the call of `src/lib/agent/tools/matchJob.ts:57-60` with no title; `no_resumes` or `needs_selection` returns the existing note of `:78` unchanged (R8 AC2).
+  4. `preprocessJob(job)` and `preprocessResume(resume)` together, as `src/lib/agent/tools/matchJob.ts:67-70`. A failed job returns note `The job description couldn't be used for matching (it may be too short) — fetch the full posting and call update_job with jobId "{jobId}" to get one.` A failed resume returns note `The resume couldn't be used for matching (it may be too short or missing content) — check it in Profile → Resumes.` The job check runs first, as `src/lib/agent/tools/matchJob.ts:71-86`.
+  5. Otherwise returns `{ kind: "directive", text: buildMatchDirective(…) }` with `resume.id`.
+- **`buildMatchDirective` post-conditions:** the result is `neutraliseBatchPrefix` applied to these blocks, joined by blank lines:
+  1. Opening line, replacing `:29-30`: "Produce a job-fit match of JobSync job id {jobId} against {source}, using resume id {resumeId}, the resume the in-app Match picks (the job's linked resume, else the default resume, else the only one). Both are shown below, normalized." `source` is today's add or update phrase (`:13-16`); `rescore` reads "the job description stored on this job". The text no longer misdescribes the match as "against the user's default resume" — the old `:29-30` wording (deferred item 1).
+  2. When `completeness === "partial"`, the warning of `:18-26` unchanged, appended to the opening line as today.
+  3. `Act as JobSync's in-app Match: follow the SYSTEM PROMPT, then answer the USER PROMPT.`
+  4. `SYSTEM PROMPT:` followed by `JOB_MATCH_SYSTEM_PROMPT` verbatim.
+  5. `USER PROMPT:` followed by `buildJobMatchPrompt(normalizedResumeText, normalizedJobText)` verbatim.
+  6. The call-back of `:49-50` unchanged, with `jobId` and `resumeId`.
+- The old resume block, instruction list and four-section format (`:31-48`) are gone (R8 AC1).
+- **`neutraliseBatchPrefix`:** every line that matches `` /^([ \t]*)\[(\d+)\/(\d+)\] /gm `` has its brackets rewritten, `[2/3] ` to `(2/3) `, with leading spaces kept. Only embedded resume and job text can match, because the directive's own text has no such line. This is the R9 AC5 neutralising step.
+- **Wire post-conditions (R9 AC4, AC5):** `composeOfferMessage` (`:103-110`) is unchanged, so the leading text of every reply is unchanged. The directive's own text (blocks 1, 3, 4, 6, the labels, and the date note) contains no `rate limit exceeded`, `duplicate detected` or `job created` in any case and does not start with `not attempted`.
+- **Dependencies:** `src/lib/agent/jobLookup.ts` and `src/lib/agent/resumeLookup.ts`, neither of which imports `server-only`; `getDefaultResumeForUser` is no longer imported here and stays for `review_resume`.
+
+### C7 — `get_job` re-score flag
+- **Purpose:** R8 AC4.
+- **Interfaces:** `McpGetJobInputShape` (`src/models/mcp.schema.ts:160-167`) gains `matchDirective: z.boolean().optional()` with a describe. `handleGetJob(input: { jobId: string; matchDirective?: boolean }, userId: string)`.
+- **Post-conditions:** without the flag the reply is byte-identical to today (R9 AC3). With `matchDirective: true` and a found job, the reply is `composeOfferMessage(renderDetail(job), await buildMatchOffer(job.id, userId, job.descriptionCompleteness, "rescore"))`. A not-found job returns `No job with that id.` and no offer. The call takes one rate-limit unit, as today, and writes nothing. The scope gate stays `jobs:read`; a read-only token gets the directive, and its `save_match_result` call returns the existing scope refusal.
+
+### C8 — Docs and PR
+- **Purpose:** R3 AC4, R9 AC6.
+- **Interfaces:** `wiki/mcp.md`: `:74` becomes thirteen tools, ten write and three read; `:82` and `:85` drop the MCP-added wording; a `save_cover_letter` bullet joins the list; `:89-93` says the resume used is the job's linked resume, else the default, and that `get_job` can hand a re-score directive; `:101` names the date added as the last field; `:121` is replaced by a statement that MCP writes reach every job the token's user owns and that revoking the token is how to stop an agent. The PR body records jobscout commits 8ecbf57 and f2d0bce as R9 AC6 states.
+
+## Data Models
+
+No schema change and no migration. New input shape, illustrative — verify against the test fake:
+
+```ts
+export const McpSaveCoverLetterInputShape = {
+  jobId: z.string().min(1).describe("The id of the job the letter is for."),
+  text: z.string().min(1).describe("The full cover letter you wrote, in Markdown."),
+};
+```
+
+`get_job` input adds `matchDirective?: boolean`. The offer type `{ kind: "directive" | "note"; text: string }` is unchanged. A stored letter is an ordinary `CoverLetter` row (`prisma/schema.prisma:96-105`).
+
+## Error Handling
+
+1. **Token lacks `jobs:write` on `save_cover_letter`:** the router returns `Insufficient scope. Required: jobs:write`.
+2. **Missing or empty `jobId` or `text`:** the router returns `Validation error: …`; no rate-limit unit is taken.
+3. **Rate limit exhausted:** `Rate limit exceeded. Try again in Ns.`; nothing written.
+4. **Trimmed text shorter than 10 characters:** `Validation error: text must be at least 10 characters after trimming.`; nothing written.
+5. **Job missing, another user's, or deleted mid-call, on any job write:** `JOB_NOT_FOUND_MESSAGE`; nothing written — the cover-letter job read runs before any create, and a P2025 on the repoint rolls the transaction back.
+6. **No resume resolves, or the job or resume fails preprocessing:** a one-line note in place of the directive, appended after a space.
+7. **Unexpected error:** `Error: {message}`; no throw.
+
+## Testing Strategy
+
+- **Unit, changed suites:**
+  - `__tests__/updateJobFromNames.spec.ts:78`, `:87`: the expected `where` loses `createdVia`; add a case where a null-`createdVia` job updates, and an other-user case returning `JOB_NOT_FOUND_MESSAGE`.
+  - `__tests__/saveMatchResult.spec.ts:47`, `:244` lose `createdVia`; `:94` expects `JOB_NOT_FOUND_MESSAGE`.
+  - `__tests__/mcpFindJob.spec.ts:104-121`: a null-`createdVia` job now gets the `update_job` text and not "cannot be updated via MCP".
+  - `__tests__/mcpListJobs.spec.ts:100`: the exact row gains ` | added YYYY-MM-DD` from the fixture `createdAt`; `:192` still holds unchanged.
+  - `__tests__/mcpAddJob.spec.ts`: replace the `getDefaultResumeForUser` mock (`:16-18`, `:50`, `:135`, `:147`) with mocks of `resolveJobForAgent`, `resolveResumeForAgent` and `preprocessJob`; `:79-82` assert the in-app section headings and the SCORES line instead of the four MCP headings; `:130` and `:170` assert `resolveResumeForAgent` is not called; `:141` and `:153` text still holds; `:264` and `:273` use `JOB_NOT_FOUND_MESSAGE`.
+  - `__tests__/mcpUpdateJob.spec.ts:47`: unchanged; `:76` mocked text moves to the constant.
+  - `__tests__/mcpGetJob.spec.ts`: existing assertions unchanged; add flag-on and flag-off cases with `buildMatchOffer` mocked.
+  - `__tests__/agentMatchJobTool.spec.ts:145`: unchanged.
+- **Unit, new suites:**
+  - `__tests__/mcpSaveCoverLetter.spec.ts`: transaction order (letter create before job update); no-profile path creates the profile first; title from `buildCoverLetterTitle` with the read titles; HTML escaping of raw `<script>`; trim-then-compare and the pinned validation text after the rate-limit unit; not-found and P2025 both give `JOB_NOT_FOUND_MESSAGE` with no letter row; every `where` carries `userId`; two saves create two rows; reply line format; unexpected error returns text.
+  - `__tests__/mcpMatchDirective.spec.ts`: directive carries `jobId`, `resumeId`, the `save_match_result` call-back and `JOB_MATCH_SYSTEM_PROMPT` verbatim; no "against the user's default resume" misdescription; partial warning only for `partial`; resume chosen from `job.resumeId` first; R9 AC5 on two fixtures — one embeds each forbidden phrase in resume and job text and asserts the directive with those texts removed has none of them, the other embeds a `[2/3] ` line and asserts no line of the result starts with the prefix.
+  - `__tests__/jobMatchPrompt.spec.ts`: the system prompt contains the three additions and still contains the SCORES format line and the seven section headings.
+- **Integration:** `save_match_results_batch` and `add_jobs_batch` reuse the single handlers; covered by the suites above.
+- **End-to-end:** `e2e/mcp-write-tools.spec.ts`, after `e2e/mcp-add-job.spec.ts:9-60`: issue a token in the UI, seed a resume for the token user whose serialized text clears `preprocessResume`'s 200-char floor (`src/lib/ai/tools/preprocessing.ts:45`) — `createResumeForMatching` (`e2e/automations.spec.ts:9-59`) alone serializes to about 130 characters, so give it more section content — so `resolveResumeForAgent` resolves it and `preprocessResume` succeeds, and add a job through `createNewJob` (`e2e/fixtures.ts:70-136`) so its `createdVia` is null. Then over MCP call `update_job` with a posting of at least 150 words so `classifyDescriptionCompleteness` returns `full` and clears `buildMatchOffer`'s `title-only` word-count gate (`DESCRIPTION_PARTIAL_MIN_WORDS` 40, `DESCRIPTION_FULL_MIN_WORDS` 150, `src/lib/constants.ts:157-158`), not merely the 200-char `preprocessJob` floor, `list_jobs` (row ends `added` today's date), `save_cover_letter` (then open the job and see the letter in the Cover Letter tab), and `get_job` with `matchDirective: true`: with the matchable resume and the full description this returns a directive carrying the `save_match_result` call-back (a resume under 200 chars or a description under 40 words makes `buildMatchOffer` return a note, R2-1). Cover-letter rows need teardown, so `CleanupRegistry` (`e2e/fixtures.ts:140-158`) and the cleanup route body (`src/app/api/test/cleanup/route.ts:21-53`) gain a `coverLetterIds` list deleted with a `profile: { userId }` scope after jobs.
+
+## Decisions taken in this document
+
+- D1 — How an agent gets a re-score directive without editing the job: options were an optional flag on the full-job read tool, a new directive tool, or a rescore flag on the update tool; chosen the read-tool flag because it writes nothing, keeps the tool count at thirteen as R3 pins, and sits where an agent already reads the job.
+- D2 — Not-found text for every job write: options were one shared string with no MCP clause, each tool's own string with the MCP clause cut, or the read tool's "No job with that id"; chosen one shared string starting "Job not found" because jobscout counts any such reply as skipped and one constant cannot drift.
+- D3 — Where the shared not-found string lives: options were the update helper's module or a new MCP messages module; chosen the update helper's module because it already owns the string and only MCP code imports it.
+- D4 — How the directive hands over the in-app method: the system prompt and user prompt go verbatim in two labelled blocks, because only the exact text keeps one method.
+- D5 — How the directive loads the job and resume: the in-app agent's job and resume lookups, so the resume choice is the in-app one by construction.
+- D6 — Opening-line wording (deferred narrow-check item 1): options were naming the resolved resume id and the choice order, or keeping "default resume"; chosen the first because the old wording misdescribes a job-linked resume.
+- D7 — Partial-description warnings on MCP (deferred narrow-check item 2): options were keep both, drop the directive warning, or strip rule (c) from the MCP copy; chosen keep both because R8 pins both and a verbatim system prompt cannot be edited per surface.
+- D8 — Batch-prefix neutralising step: options were rewriting the brackets to parentheses, indenting every embedded line, or dropping such lines; chosen rewriting brackets on any line that starts with the prefix after optional spaces, because it stays readable and defeats a parser that trims.
+- D9 — Note when no resume resolves: the existing no-default-resume note, because R8 AC2 says "as today" and it is actionable in both cases.
+- D10 — Jobs with no recorded completeness (hand-entered jobs) on re-score: no gate, because the classifier reads raw text, stored HTML would inflate the count, and job preprocessing already rejects thin text with a note.
+- D11 — Directive builder signature: options were keeping the context argument with a new rescore value, or dropping it; chosen keeping it so the add and update callers and their test assertion stay unchanged.
+- D12 — Cover-letter transaction span: options were every query in the transaction, or only the profile and the writes; chosen every query because a job deleted mid-call rolls back cleanly and the query count stays at six.
+- D13 — Ownership of the two creates (carried R4-1): options were ownership through the create data plus a user-scoped profile read in the same transaction, or a post-create ownership check; chosen create data because a create has no filter and the profile id can only come from the caller's own profile.
+- D14 — Validation and success strings for the cover-letter tool: the router's "Validation error" prefix with a trimmed-length sentence, so agents see one validation shape across tools; the success line names job id, title and letter id as R4 AC6 asks.
+- D15 — E2E teardown of saved letters: options were a cover-letter id list on the test cleanup endpoint, or leaving rows behind; chosen the id list because the endpoint exists to stop e2e rows piling up.
+
+## Scope notes
+
+- Carried R4-1: resolved in C3 and D13; R6 AC3's "where" reads as "where, or create data from a user-scoped read in the same transaction". Reported as re-decided.
+- Carried R5-5: C5 states the shared prompt changes in-app `match_job`, automation on-demand analysis and the job-match eval as well as MCP; the requirements Introduction's "MCP adopts the app prompt" means both surfaces adopt one amended prompt. The lean `AUTOMATION_JOB_MATCH_SYSTEM_PROMPT` is unchanged; the decomposition names only the in-app Match prompt.
+- Deferred narrow-check items: resolved by D6 and D7.
+- Not changed: the origin filter's `createdVia` condition in `src/lib/mcp/jobQuery.ts:74`, which is a read filter, not a write gate.
+- Eval scores under `evals/job-match` may move with the prompt additions; re-baselining them is out of scope.
+- Nothing the decomposition lists is cut or deferred.
+
+## Revision History
+
+- **v4** (2026-10-06) — SHOULD_FIX-only corrective pass.
+  - **Lint pass.** 0 errors; 0 fixed; rejected all 48 citation-identifier warnings + 10 citation-bare info — tool-name strings, new/other identifiers named in prose, and the C6/C7 bare-range convention on reference-dense lines (prior rounds verified every cited artifact accurate; per-identifier anchoring widens scope per P11).
+  - **R3-1 — Accepted (SHOULD_FIX).** The match-directive post-condition and the directive unit-test assertion now forbid only the old misdescription that the match runs against the user's default resume, not the bare substring, so the kept D6 choice order that names the default resume as a fallback no longer fails its own guarding test.
+  - **R3-2 — Accepted (MINOR).** C1 post-conditions now state no discovery-status gate exists in the update helper, whose where keys only on id, user id and the created-via flag, so a dismissed or other discovery job updates once that flag is dropped, closing the trace to R1 AC6.
+- **v3** (2026-10-06) — Round-2 adversarial response (adversarial-analysis-design-r2.md, verdict iterate 1/1/1).
+  - **Lint pass.** 0 errors; 0 fixed; rejected all 47 citation-identifier warnings + 9 citation-bare info — tool-name strings, new/other identifiers named in prose, and the C6/C7 bare-range convention on reference-dense lines (prior rounds verified every cited artifact accurate; per-identifier anchoring widens scope per P11).
+  - **R2-1 — Accepted (MUST_FIX).** The end-to-end bullet now pins the real re-score gates: a seeded resume serializing over the 200-character resume preprocess floor (createResumeForMatching alone is about 130 characters) and an update_job posting of at least 150 words so the word-count classifier returns full and clears the title-only gate, not merely the 200-character job floor; the note case names a resume under 200 characters or a description under 40 words.
+  - **R2-2 — Accepted (SHOULD_FIX).** C3's Ownership bullet now states the profile find-or-create is unguarded (profile user id not unique) and the duplicate-profile race is tolerated as it pre-exists in createResume, letters staying visible through the user-scoped relation filter; no migration added.
+  - **R2-3 — Accepted (MINOR).** C3 step 2 now renders the Markdown before any transaction and step e stores it, so the SQLite write lock no longer covers the render.
+- **v2** (2026-10-06) — Round-1 adversarial response (adversarial-analysis-design.md, verdict iterate 0/1/3).
+  - **Lint pass.** 0 errors; rejected all 42 citation-identifier warnings and 9 citation-bare info as reference-dense-line noise (per P11).
+  - **R1-1 — Accepted (SHOULD_FIX).** The end-to-end bullet now seeds a resume for the token user and enriches the job over the preprocess char floor before the re-score read, so that read returns a directive carrying the save-match call-back rather than a note.
+  - **R1-2 — Accepted (MINOR).** C6 post-condition 1 now rewords the title-only note on the re-score context so it no longer says the job was just saved, keeping the fetch-and-update guidance.
+  - **R1-3 — Rejected (MINOR).** C7 already states a read-only token receives the directive and its save-match call returns the scope refusal; the trade-off writes nothing and is documented, so no change.
+- **v1** (2026-10-06) — Initial draft.
+  - **Lint pass.** 7 citation-path fixes; rejected the remaining citation-identifier noise on reference-dense lines (per P11).

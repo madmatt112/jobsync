@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/saveMatchResult.spec.ts"],"seams":{"__tests__/saveMatchResult.spec.ts":"handleSaveMatchResult(input, userId, tokenName)"},"redCommit":"55cc34e","baseSha":"70a1edaece28e46030cdeb186da7d3805aae7ff5","base":"inconclusive","head":"not-run","amended":false,"judged":null}

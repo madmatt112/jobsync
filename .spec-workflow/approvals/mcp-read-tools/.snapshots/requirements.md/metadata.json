@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-read-tools/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-09-21T18:22:51.927Z",
+      "trigger": "initial",
+      "approvalId": "approval_1790014971920_74nkmooou",
+      "approvalTitle": "Requirements: MCP read tools (get_job, list_jobs, search_jobs)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-09-21T21:24:28.633Z",
+      "trigger": "approved",
+      "approvalId": "approval_1790014971920_74nkmooou",
+      "approvalTitle": "Requirements: MCP read tools (get_job, list_jobs, search_jobs)"
+    }
+  ]
+}

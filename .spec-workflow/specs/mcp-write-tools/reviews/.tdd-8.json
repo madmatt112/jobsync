@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/jobMatchPrompt.spec.ts"],"seams":{"__tests__/jobMatchPrompt.spec.ts":"JOB_MATCH_SYSTEM_PROMPT"},"redCommit":"7f2f418","baseSha":"4436170a6ec54d56bc8d2c3e5f1b3522b1a1d3eb","base":"inconclusive","head":"not-run","amended":false,"judged":null}

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/mcp-write-tools/requirements.md",
+  "currentVersion": 3,
+  "snapshots": [
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2026-10-06T20:05:51.479Z",
+      "trigger": "approved",
+      "approvalId": "approval_1791317141381_y23cnsbig",
+      "approvalTitle": "mcp-write-tools requirements v6"
+    }
+  ]
+}
