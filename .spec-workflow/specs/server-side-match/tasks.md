@@ -1,0 +1,210 @@
+# Tasks Document
+
+Document version: v1
+
+Dependency order: tasks run in number order on one branch from `main`. Tasks 1-3 (thinking option, DeepSeek model) stand alone. Task 4 adds the setting and its server action; task 5 builds the switch on that action. Task 6 adds the failure columns that task 9 writes. Tasks 7 (shared write) and 8 (constants, budget) feed task 9 (the run). Task 10 (queue) drives task 9; task 11 (reply decision) enqueues through task 10; task 12 wires the MCP handlers and the skip flag to task 11; task 13 updates the tool text, the wiki and the generated tool list after task 12's schema change; task 14 (end-to-end) runs last. No task uses an artefact a later task creates, so no bridge is needed. Every task leaves the tree compiling with `npx tsc --noEmit`, `npm run lint` and `npm run test` green.
+
+- [ ] 1. Match provider options on the in-app Match
+  - File: src/lib/ai/matchProviderOptions.ts
+  - File: src/lib/agent/nestedGeneration.ts
+  - File: src/lib/agent/tools/matchJob.ts
+  - File: __tests__/agentNestedGeneration.spec.ts
+  - File: __tests__/agentMatchJobTool.spec.ts
+  - Test: __tests__/agentMatchJobTool.spec.ts — buildMatchJobTool(ctx).execute(input, options)
+  - Add `MATCH_PROVIDER_OPTIONS` (design C1); `runNestedGeneration` gains the optional trailing `extraProviderOptions` arg; `match_job` passes the constant
+  - Purpose: the in-app Match sends DeepSeek thinking disabled (Req 1.1)
+  - Exact values: no existing assertion changes; `__tests__/agentNestedGeneration.spec.ts:42-58` and `__tests__/agentMatchJobTool.spec.ts:142-158` read only `providerOptions.ollama`, which stays
+  - Regression guards: the call without the new arg sends exactly the base object (Req 1.7); `src/app/api/ai/chat/route.ts` is not edited (Req 1.6)
+  - _Leverage: src/lib/agent/nestedGeneration.ts:25-42 (args type), src/lib/agent/nestedGeneration.ts:98-107 (the call), src/lib/agent/tools/matchJob.ts:88-109_
+  - _Requirements: 1.1, 1.5, 1.6, 1.7_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C1, create src/lib/ai/matchProviderOptions.ts exporting MATCH_PROVIDER_OPTIONS = { deepseek: { thinking: { type: "disabled" } } } (no "server-only", so every match surface can import it); add the optional trailing field extraProviderOptions to NestedGenerationArgs (:25-42), typed as the providerOptions type streamText accepts, and make the call at :98-107 pass `{ ollama: { options: { num_ctx: numCtx } }, ...extraProviderOptions }`; in src/lib/agent/tools/matchJob.ts pass extraProviderOptions: MATCH_PROVIDER_OPTIONS in the runNestedGeneration call (:88-109). Tests: in __tests__/agentMatchJobTool.spec.ts assert streamText's providerOptions.deepseek.thinking.type is "disabled" and its keys are exactly ollama and deepseek (Req 1.1, 1.5); in __tests__/agentNestedGeneration.spec.ts add a case that extraProviderOptions { deepseek: … } is merged beside ollama, and a regression-guard case (green at base, Req 1.7 invariant) that a call without it sends providerOptions deep-equal to { ollama: { options: { num_ctx: APP_CONSTANTS.AI_OLLAMA_NUM_CTX } } } | Restrictions: Do not edit src/app/api/ai/chat/route.ts or the review_resume and generate_cover_letter tools; keep the comment at :104-105 true; do not add think to the ollama key | Success: match_job's streamText call carries deepseek.thinking.type "disabled" beside the unchanged ollama key and no other key; a nested generation given extraProviderOptions merges it beside the ollama key; a nested generation without extraProviderOptions sends exactly the ollama object; git diff shows no change to the chat route; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 2. Match provider options on the automation match and on-demand analysis
+  - File: src/lib/scraper/automation-run/match.ts
+  - File: src/actions/automation/analyze.ts
+  - File: __tests__/matchProviderOptions.spec.ts
+  - Test: __tests__/matchProviderOptions.spec.ts — matchJobToResume(job, resume, sourceBoard, aiSettings, userId) and analyzeDiscoveredJob(jobId)
+  - Each `generateText` call gains `providerOptions: MATCH_PROVIDER_OPTIONS`, the constant task 1 exports
+  - Purpose: the two `generateText` match surfaces send thinking disabled (Req 1.2, 1.3), whatever the stored model (Req 2.4)
+  - Exact values: new suite only; no existing assertion changes
+  - Regression guard: a stored `deepseek-reasoner` reaches `getModel` unchanged (Req 2.3 invariant, green at base)
+  - _Leverage: src/lib/scraper/automation-run/match.ts:78-84, src/actions/automation/analyze.ts:112-117, __tests__/agentNestedGeneration.spec.ts:4-8 (partial "ai" mock)_
+  - _Requirements: 1.2, 1.3, 1.5, 2.3, 2.4_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C1, add providerOptions: MATCH_PROVIDER_OPTIONS (import the constant task 1 exports) to the generateText call in src/lib/scraper/automation-run/match.ts (:78-84) and in src/actions/automation/analyze.ts (:112-117). Tests: create __tests__/matchProviderOptions.spec.ts; mock generateText with a partial "ai" mock as __tests__/agentNestedGeneration.spec.ts:4-8 does, returning text with a SCORES line, finishReason "stop" and totalUsage; mock getModel through a partial mock of "@/lib/ai" (both files import it from that barrel), and mock the other inputs each function reads (match.ts: ./resumeText; analyze.ts: @/lib/db, ../shared requireUser, @/actions/profile.actions, @/actions/job.actions, @/lib/automation-logger, and preprocessing through "@/lib/ai"). Assert for each function: generateText's providerOptions.deepseek.thinking.type is "disabled" and providerOptions has no key other than deepseek (Req 1.2, 1.3, 1.5). For matchJobToResume with aiSettings { provider: "deepseek", model: "deepseek-reasoner" } assert getModel received "deepseek-reasoner" (regression guard, Req 2.3) and the call still carries thinking disabled (Req 2.4) | Restrictions: Do not change AUTOMATION_JOB_MATCH_SYSTEM_PROMPT, temperatures, the abort signal or the span attributes; do not touch src/lib/scraper/automation-run/aiSettings.ts (task 3 owns it) | Success: both generateText calls send deepseek.thinking.type "disabled" with no other provider key; a stored deepseek-reasoner is sent unchanged with thinking disabled; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 3. DeepSeek model enum and default
+  - File: src/models/ai.model.ts
+  - File: src/lib/scraper/automation-run/aiSettings.ts
+  - File: __tests__/automationAiSettings.spec.ts
+  - File: __tests__/AiSettings.spec.tsx
+  - Test: __tests__/automationAiSettings.spec.ts — getDefaultModelForProvider(AiProvider.DEEPSEEK)
+  - `DeepseekModel` (:37-40) becomes the single member `DEEPSEEK_FLASH = "deepseek-flash"`; `getDefaultModelForProvider` (:33) returns it (design C2)
+  - Purpose: a new DeepSeek setup picks `deepseek-flash` (Req 2.1, 2.2)
+  - Count change: the enum drops from two members to one; `grep -rn "DeepseekModel\|DEEPSEEK_CHAT\|DEEPSEEK_REASONER\|deepseek-chat\|deepseek-reasoner" src __tests__ e2e wiki` finds every dependent; only `src/lib/scraper/automation-run/aiSettings.ts:33` uses a removed member
+  - Exact values: `__tests__/AiSettings.spec.tsx:67-95` mocks a live list naming `deepseek-chat`; those values stay and the cases stay green
+  - _Leverage: src/components/settings/AiSettings.tsx:76-87 (fallback list), src/components/settings/AiSettings.tsx:147-156 (fallback on fetch error)_
+  - _Requirements: 2.1, 2.2, 2.3_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C2 and design D15 (Req 2.2), replace the two DeepseekModel members (src/models/ai.model.ts:37-40) with DEEPSEEK_FLASH = "deepseek-flash" and return DeepseekModel.DEEPSEEK_FLASH from getDefaultModelForProvider for AiProvider.DEEPSEEK (src/lib/scraper/automation-run/aiSettings.ts:33). Run the grep in this task's count-change line and fix every source use of a removed member. Tests: create __tests__/automationAiSettings.spec.ts asserting getDefaultModelForProvider(AiProvider.DEEPSEEK) === "deepseek-flash" (Req 2.1; mock @/lib/db so the module imports); in __tests__/AiSettings.spec.tsx add a case that switches to DeepSeek with fetch resolving ok: false, opens the model select and asserts the options are exactly ["deepseek-flash"], with no "deepseek-chat" or "deepseek-reasoner" (Req 2.2). Leave the existing deepseek-chat cases as they are | Restrictions: Do not edit getFallbackModels (it derives from the enum); do not rewrite or migrate stored model names (Req 2.3 invariant — no code reads or rewrites the stored model, verified, not red-first); do not touch the live models endpoint | Success: getDefaultModelForProvider returns "deepseek-flash" for DeepSeek; the DeepSeek fallback list is exactly ["deepseek-flash"] when the models fetch fails; the grep finds no source use of a removed member; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 4. Server-side match setting and its server action
+  - File: src/models/userSettings.model.ts
+  - File: src/actions/userSettings.actions.ts
+  - File: __tests__/userSettingsServerMatch.spec.ts
+  - Test: __tests__/userSettingsServerMatch.spec.ts — updateServerSideMatch(enabled)
+  - `AiSettings` gains `serverSideMatch?: boolean`; `updateUserSettings` takes per-key partials; new action `updateServerSideMatch` (design C3)
+  - Purpose: the flag persists without touching the stored provider or model (Req 3.2, 3.3)
+  - Exact values: new suite only; `defaultUserSettings` (:22-30) is unchanged, so no existing assertion changes
+  - Regression guard: `updateAiSettings` keeps a stored flag — the merge at `src/actions/userSettings.actions.ts:68-72` already spreads stored `ai` under the patch (Req 3.3, green at base)
+  - _Leverage: src/actions/userSettings.actions.ts:48-112, src/actions/userSettings.actions.ts:114-118, src/models/userSettings.model.ts:3-6_
+  - _Requirements: 3.1, 3.2, 3.3_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C3, add serverSideMatch?: boolean to AiSettings (src/models/userSettings.model.ts:3-6); change the updateUserSettings parameter (src/actions/userSettings.actions.ts:48-50) from Partial of UserSettingsData to an object with optional ai: Partial of AiSettings and optional display: Partial of DisplaySettings, leaving the merge body unchanged; add the async server action updateServerSideMatch(enabled: boolean) that returns updateUserSettings({ ai: { serverSideMatch: enabled } }). Tests: create __tests__/userSettingsServerMatch.spec.ts mocking prisma (userSettings.findUnique and upsert) and requireUser; assert that with stored ai { provider: "deepseek", model: "deepseek-flash" }, updateServerSideMatch(true) writes settings whose ai is { provider: "deepseek", model: "deepseek-flash", serverSideMatch: true } (Req 3.2); assert with no stored row the written ai carries the default provider, no model and serverSideMatch true; regression guard (green at base): with stored ai carrying serverSideMatch true, updateAiSettings({ provider: "openai", model: "gpt-4o" }) writes ai with serverSideMatch still true (Req 3.3) | Restrictions: Do not change defaultUserSettings (an absent flag reads as off, Req 3.1); do not change updateAiSettings or updateDisplaySettings bodies; the file stays "use server" and exports only async functions | Success: updateServerSideMatch persists the flag and keeps provider and model; with no stored row it writes the default provider, no model and the flag; updateAiSettings keeps a stored flag; npx tsc --noEmit passes with the new parameter type; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 5. Settings switch for server-side matching
+  - File: src/components/settings/ServerMatchSettings.tsx
+  - File: src/app/dashboard/settings/page.tsx
+  - File: __tests__/ServerMatchSettings.spec.tsx
+  - Test: __tests__/ServerMatchSettings.spec.tsx — render(ServerMatchSettings)
+  - New client component (design C3 UI) rendered after `AiSettings` in the "ai-provider" section (`src/app/dashboard/settings/page.tsx:25`)
+  - Purpose: the operator turns server-side matching on and off in Settings (Req 3.2)
+  - Exact values: `__tests__/AiSettings.spec.tsx` renders `AiSettings` alone and its module mock (:6-9) stays valid; no existing assertion changes
+  - _Leverage: src/components/ui/switch.tsx:8-29, src/components/settings/AiSettings.tsx:176-199 (toast pattern), __tests__/AiSettings.spec.tsx:4-19 (mocks)_
+  - _Requirements: 3.1, 3.2_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C3 UI, create the "use client" component src/components/settings/ServerMatchSettings.tsx that loads the flag with getUserSettings, renders a Switch with id "server-side-match", a Label "Score MCP jobs on the server" and the helper text "Jobs added or updated over MCP are scored in the background with the model above, using your provider key."; on toggle it calls the action task 4 exports with the new value, shows toastSuccess("Server-side matching on.") or toastSuccess("Server-side matching off.") on success, and on failure reverts the switch and calls toastError with the returned message. Render it after AiSettings in the "ai-provider" branch of src/app/dashboard/settings/page.tsx:25. Tests: create __tests__/ServerMatchSettings.spec.tsx mocking @/actions/userSettings.actions and @/lib/toast; assert the switch is unchecked when the stored ai has no flag (Req 3.1); toggling calls the action with true and shows the "on" toast (Req 3.2); a failed action reverts the switch to unchecked and calls toastError with the message | Restrictions: Do not edit src/components/settings/AiSettings.tsx; reuse the existing Switch and Label components | Success: the switch reads off with no stored flag, saves on toggle with the success toast, and reverts with an error toast on failure; the settings page renders it in the AI provider section; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 6. Failure columns and the get_job failure line
+  - File: prisma/schema.prisma
+  - File: prisma/migrations/20261030120000_job_server_match_failure/migration.sql
+  - File: src/lib/mcp/tools/getJob.ts
+  - File: __tests__/mcpGetJob.spec.ts
+  - Test: __tests__/mcpGetJob.spec.ts — handleGetJob(input, userId)
+  - Job gains `serverMatchError` and `serverMatchFailedAt` after `descriptionCompleteness` (`prisma/schema.prisma:476`); `renderDetail` appends the failure line (design C9, Data Models)
+  - Purpose: `get_job` shows a server-match failure no later match superseded (Req 7.4, 7.5)
+  - Exact values: fixtures without the columns render as today; `__tests__/mcpGetJob.spec.ts:210-240` assertions stay
+  - Regression guards: a row with null columns renders byte-identically (Req 3.5); a saved server match renders `via deepseek/deepseek-flash` (Req 5.8); `__tests__/backup*.spec.ts` stay green unchanged
+  - _Leverage: src/lib/mcp/tools/getJob.ts:47-48 (day), src/lib/mcp/tools/getJob.ts:95-111, prisma/migrations/20260712184644_add_resume_review_data/migration.sql_
+  - _Requirements: 3.5, 5.8, 7.4, 7.5_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design Data Models and C9, add `serverMatchError String?` and `serverMatchFailedAt DateTime?` to model Job after descriptionCompleteness (prisma/schema.prisma:476); hand-write prisma/migrations/20261030120000_job_server_match_failure/migration.sql with the two ALTER TABLE "Job" ADD COLUMN statements from the design; run npx prisma generate, then npx prisma migrate deploy against the dev database. In renderDetail (src/lib/mcp/tools/getJob.ts:95-111) push one line after the score block: "Server-side match failed " + day(serverMatchFailedAt) + ": " + serverMatchError, shown when serverMatchFailedAt is set AND (the visible score is null, OR matchData has no matchedAt, OR matchedAt is earlier than serverMatchFailedAt). Tests in __tests__/mcpGetJob.spec.ts using minimalJob: the line shows on an unscored job (Req 7.4); it shows when matchedAt is older than the failure, with the score line kept; it is absent when matchedAt is newer (Req 7.5); regression guards (green at base): minimalJob() with no columns renders the same full text as before (Req 3.5), and matchData { provider: "deepseek", model: "deepseek-flash", surface: "server", matchedAt } renders "via deepseek/deepseek-flash" (Req 5.8). These anchors are an illustrative minimum: widen to every assertion the change touches | Restrictions: Do not extend the backup Job schema (src/lib/backup/schema.ts:191-216; design D9); do not change GET_JOB_INCLUDE; keep the "Not scored." text | Success: the failure line appears exactly when no newer match exists and carries the date and reason; an older score line stays beside it; rows without the columns render byte-identically; a server match renders via deepseek/deepseek-flash; the migration applies; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 7. Shared user-scoped match write
+  - File: src/lib/jobs/writeJobMatch.ts
+  - File: src/actions/job/status.ts
+  - File: __tests__/writeJobMatch.spec.ts
+  - Test: __tests__/writeJobMatch.spec.ts — writeJobMatch(userId, jobId, matchScore, matchData)
+  - New session-free write (design C7); `saveJobMatchResult` (`src/actions/job/status.ts:52-70`) calls it in place of its inline update
+  - Purpose: the background run and the session action share one write (Req 5.5)
+  - Exact values: `__tests__/job.actions.spec.ts:1711-1763` (saveJobMatchResult) asserts the same `prisma.job.update` call and return shapes; no value changes, the cases are regression guards
+  - _Leverage: src/actions/job/status.ts:60-63, src/lib/jobs/createJobFromNames.ts (module style beside it)_
+  - _Requirements: 5.5_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C7, create src/lib/jobs/writeJobMatch.ts (not a "use server" module) exporting writeJobMatch(userId, jobId, matchScore, matchData) that runs prisma.job.update({ where: { id: jobId, userId }, data: { matchScore, matchData } }) and lets a P2025 throw; in saveJobMatchResult replace the inline update at src/actions/job/status.ts:60-63 with writeJobMatch(user.id, jobId, matchScore, matchData). Tests: create __tests__/writeJobMatch.spec.ts mocking @prisma/client as __tests__/mcpGetJob.spec.ts:8-11 does; assert the update where is exactly { id, userId } and the data exactly { matchScore, matchData }; assert a rejected P2025 error propagates. __tests__/job.actions.spec.ts:1711-1763 must pass unchanged (regression guard) | Restrictions: Keep saveJobMatchResult's requireUser check, return shape and handleError mapping; do not add revalidatePath | Success: writeJobMatch updates with { id, userId } and rethrows P2025; saveJobMatchResult's existing tests pass unchanged; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 8. Server-match constants and the match budget
+  - File: src/lib/constants.ts
+  - File: src/lib/mcp/rate-limit.ts
+  - File: src/lib/mcp/serverMatch/budget.ts
+  - File: __tests__/serverMatchBudget.spec.ts
+  - Test: __tests__/serverMatchBudget.spec.ts — takeServerMatchBudget(userId)
+  - Add `SERVER_MATCH_SURFACE: "server"` (beside `src/lib/constants.ts:169`) and `SERVER_MATCH_CONCURRENCY: 3` (beside :109); export `configuredMax` (`src/lib/mcp/rate-limit.ts:13-17`) as `mcpRateLimitMax`; new per-user budget (design C8)
+  - Purpose: server matches have their own budget, at least the MCP hourly budget (Req 6.2, 6.3)
+  - Exact values: `__tests__/mcpRateLimit.spec.ts` keeps its values; `MAX` (:19) is unchanged
+  - _Leverage: src/lib/mcp/rate-limit.ts:23-49, src/lib/ai/rate-limiter.ts:33-78 (checkRateLimit, not called)_
+  - _Requirements: 6.2, 6.3, 6.5_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C8 and the design Constants list, add SERVER_MATCH_SURFACE: "server" next to AGENT_CHAT_MATCH_SURFACE and SERVER_MATCH_CONCURRENCY: 3 next to AUTOMATION_MATCH_CONCURRENCY in src/lib/constants.ts; rename configuredMax (src/lib/mcp/rate-limit.ts:13-17) to the exported mcpRateLimitMax and keep `const MAX = mcpRateLimitMax()`; create src/lib/mcp/serverMatch/budget.ts exporting takeServerMatchBudget(userId) returning { allowed, resetIn }, a per-user window on its own Map in the shape of checkMcpRateLimit, whose max is mcpRateLimitMax() read at check time and whose window is MCP_RATE_LIMIT_WINDOW_MS. Tests: create __tests__/serverMatchBudget.spec.ts with fake timers: the first mcpRateLimitMax() takes are allowed and the next is refused with resetIn above 0; after the window passes a take is allowed again; with MCP_RATE_LIMIT_MAX set to "100" in process.env, 100 takes are allowed (Req 6.3); 50 takes leave checkRateLimit(userId) from @/lib/ai/rate-limiter reporting the same remaining as a fresh user (Req 6.2, 6.5) | Restrictions: Never call checkRateLimit or checkMcpRateLimit from the budget; do not share the MCP store | Success: the budget allows exactly mcpRateLimitMax() takes per window, follows the env override, resets after the window, and leaves the interactive buckets untouched; mcpRateLimit.spec.ts passes unchanged; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 9. Server match run
+  - File: src/lib/mcp/serverMatch/run.ts
+  - File: __tests__/serverMatchRun.spec.ts
+  - Test: __tests__/serverMatchRun.spec.ts — runServerMatch(task, timeoutMs)
+  - New `runServerMatch` and `recordServerMatchFailure` (design C6), using the constant task 1 exports, the columns task 6 adds, the write task 7 exports and the surface constant task 8 adds
+  - Purpose: one match with the in-app method, scoped to the token's user (Req 5, Req 7)
+  - Exact values: new suite only
+  - _Leverage: src/lib/agent/tools/matchJob.ts:48-70 (lookups, preprocess), src/actions/automation/analyze.ts:92-127 (withSpan, generateText), src/lib/ai/jobMatch/parse.ts:24-45, src/lib/ai/providers.ts:7-23_
+  - _Requirements: 1.4, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 7.1, 7.2, 7.3, 7.6_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C6 and the matchData shape in design Data Models, create src/lib/mcp/serverMatch/run.ts exporting the ServerMatchTask type and runServerMatch(task, timeoutMs = APP_CONSTANTS.AI_JOB_MATCH_TIMEOUT_MS) returning "saved", "failed" or "dropped", following design C6 steps 1-7, the Fail paragraph and the closed reason set exactly. Import getModel from "@/lib/ai/providers" (not the barrel) and the preprocessors from the paths matchJob.ts uses. Tests: create __tests__/serverMatchRun.spec.ts; vi.mock "@/lib/ai/providers" so getModel returns a MockLanguageModelV3 from "ai/test"; mock the lookups and preprocessors as __tests__/mcpAddJob.spec.ts:10-32 does, writeJobMatch's module, and @prisma/client for job.updateMany. Assert: system, prompt, temperature and doGenerateCalls[0].providerOptions (ollama num_ctx plus deepseek thinking "disabled") (Req 5.3, 1.4); resolveJobForAgent is called with the task's userId and jobId at run time (Req 5.2, NFR security); the saved matchData fields and surface "server" (Req 5.6); each reason writes serverMatchError and serverMatchFailedAt through updateMany scoped { id, userId }, logs one error line, and never calls writeJobMatch (Req 7.2, 7.3); no_job, a P2025 from writeJobMatch, and updateMany count 0 return "dropped" with no record (Req 7.6); runServerMatch(task, 5) with a never-resolving model returns "failed" with the reason "Timed out after 0.005 s." | Restrictions: Never read userId from the job row; no real provider call; do not import from src/lib/mcp/serverMatch/queue.ts (task 10 creates it) | Success: a scored reply saves matchData with every design field through writeJobMatch; every failure reason records the columns and one log line without touching the match; deleted jobs drop silently; the request carries the shared prompt, FEEDBACK temperature and both provider options; the job lookup uses the task's userId and jobId at run time; a 5 ms timeout returns "failed" with the timeout reason; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 10. Server match queue and limiter
+  - File: src/lib/mcp/serverMatch/queue.ts
+  - File: __tests__/serverMatchQueue.spec.ts
+  - Test: __tests__/serverMatchQueue.spec.ts — enqueueServerMatch(task)
+  - New queue with per-job coalescing, budget wait, Ollama gate and process-wide limiter (design C8), driving the run task 9 exports and the budget task 8 exports
+  - Purpose: matches run in the background under their own limits (Req 4.10, 4.11, 6)
+  - Exact values: new suite only
+  - _Leverage: src/lib/db.ts:12-18 (globalThis holder), node_modules/p-limit/index.d.ts:89 (pLimit), src/lib/scraper/automation-run/aiSettings.ts:18-24 (Ollama rule)_
+  - _Requirements: 4.10, 4.11, 6.1, 6.4, 6.5_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C8 (State, Enqueue post-conditions and drive steps 1-4), create src/lib/mcp/serverMatch/queue.ts exporting the synchronous enqueueServerMatch(task), whenServerMatchIdle() and resetServerMatchQueue(), with state on globalThis under __jobsyncServerMatch, limiter = pLimit(APP_CONSTANTS.SERVER_MATCH_CONCURRENCY) and ollamaGate = pLimit(1). Tests: create __tests__/serverMatchQueue.spec.ts; vi.mock the run module task 9 creates with controllable deferred promises; mock the budget module with importOriginal so the real budget runs unless a test overrides it; call resetServerMatchQueue in beforeEach; use vi.useFakeTimers and advanceTimersByTimeAsync. Assert: enqueueServerMatch returns before runServerMatch is called (Req 4.11); with 5 hosted tasks in flight never exceeds SERVER_MATCH_CONCURRENCY, and with 3 Ollama tasks it never exceeds 1 (Req 6.1); three enqueues of one job while it runs give exactly two runs, the second with the latest task (Req 4.10); two enqueues while queued give one run; a budget refusal with resetIn 1000 runs only after 1000 ms and never as a failure (Req 6.4); 50 runs through the real budget leave checkRateLimit(userId).remaining equal to a fresh user's (Req 6.5); a rejecting run is logged and the next queued job still runs (NFR reliability) | Restrictions: The budget wait must hold no limiter slot (design D6, Req 6.4); never call checkRateLimit; no real provider call | Success: enqueue returns before the run starts; in flight stays within SERVER_MATCH_CONCURRENCY and within 1 for Ollama; enqueues while running give one rerun with the latest task, and enqueues while queued give one run; an over-budget match waits for resetIn and does not fail; 50 runs leave the interactive bucket unchanged; a rejecting run does not stop the next; whenServerMatchIdle resolves once all entries finish; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 11. Reply decision
+  - File: src/lib/mcp/serverMatch/offer.ts
+  - File: src/lib/mcp/tools/matchDirective.ts
+  - File: __tests__/serverMatchOffer.spec.ts
+  - Test: __tests__/serverMatchOffer.spec.ts — resolveMatchReply(jobId, userId, completeness, context, skipMatch)
+  - New `resolveMatchReply`, `readServerMatchSettings`, `MatchReply` and the three texts (design C4); `composeOfferMessage` (:144-151) widens its parameter type to `MatchReply`
+  - Purpose: choose directive, note, queued or skipped for one add or update (Req 3.5, 4.5-4.7, 8.2-8.4)
+  - Exact values: `__tests__/mcpMatchDirective.spec.ts` keeps every value; the body of `composeOfferMessage` is unchanged
+  - Regression guard: off returns the `buildMatchOffer` result by deep equality (Req 3.5 invariant)
+  - _Leverage: src/lib/mcp/tools/matchDirective.ts:65-141, src/lib/scraper/automation-run/aiSettings.ts:41-55_
+  - _Requirements: 3.1, 3.4, 3.5, 4.1, 4.5, 4.6, 4.7, 8.2, 8.3, 8.4_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C4 (Interfaces, Order steps 1-5, Texts exact), create src/lib/mcp/serverMatch/offer.ts; readServerMatchSettings reads through getUserAiSettings(userId) and reads a throw or a non-true flag as off; enqueue through the function task 10 exports. In src/lib/mcp/tools/matchDirective.ts widen composeOfferMessage's offer parameter to MatchReply with an `import type` (offer.ts imports from this file). Tests: create __tests__/serverMatchOffer.spec.ts with partial mocks of @/lib/scraper/automation-run/aiSettings (getUserAiSettings), @/lib/mcp/tools/matchDirective (buildMatchOffer) and a full mock of the queue module. Assert: skipMatch true returns kind "skipped" with SKIPPED_TEXT and reads no settings and builds no offer (Req 8.2, 8.3); skipMatch false or absent behaves as without it (Req 8.4); a stored ai without the flag, a throwing read and the flag off each return buildMatchOffer's result by deep equality and never enqueue (Req 3.1, 3.5); getUserAiSettings is called with the given userId (Req 3.4); a note offer passes through (Req 4.6); a directive with no model returns NO_MODEL_TEXT as a note (Req 4.7); a directive with a model enqueues once with { jobId, userId, provider, model } and returns QUEUED_TEXT (Req 4.1); none of the three texts contains "SYSTEM PROMPT:" or "save_match_result" (Req 4.5) | Restrictions: Do not change buildMatchOffer or composeOfferMessage's body; do not edit the MCP handlers (task 12 owns them) | Success: each branch returns the design kind and exact text; skip reads no settings and builds no offer; an absent flag, a throwing read and the flag off each equal buildMatchOffer's output; settings are read by the given userId; enqueue happens once, only on the queued branch, with the task fields; no text contains "SYSTEM PROMPT:" or "save_match_result"; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 12. MCP handlers and the skip flag
+  - File: src/models/mcp.schema.ts
+  - File: src/lib/mcp/tools/addJob.ts
+  - File: src/lib/mcp/tools/updateJob.ts
+  - File: __tests__/mcpAddJob.spec.ts
+  - File: __tests__/mcpUpdateJob.spec.ts
+  - File: __tests__/mcpBatch.spec.ts
+  - File: __tests__/serverMatchFlow.spec.ts
+  - Test: __tests__/mcpAddJob.spec.ts — handleAddJob(input, userId, tokenName)
+  - `McpAddJobInputShape` gains `skipMatch`; the three write paths call the function task 11 exports (design C5)
+  - Purpose: MCP adds and description updates queue a match when the setting is on (Req 4, Req 8)
+  - Exact values: with the setting off every existing exact-text assertion in the three suites stays (regression guard, Req 3.5)
+  - Regression guards: duplicate, unchanged-description and rate-limit replies (Req 4.8, D13 of the design); batch lines carry each item's reply (Req 4.4); `get_job` with `matchDirective` (Req 4.9, file not edited)
+  - _Leverage: src/lib/mcp/tools/addJob.ts:38-43, src/lib/mcp/tools/addJob.ts:62, src/lib/mcp/tools/addJob.ts:69-74, src/lib/mcp/tools/updateJob.ts:29-34, src/models/mcp.schema.ts:67-72_
+  - _Requirements: 3.5, 4.1, 4.2, 4.3, 4.4, 4.6, 4.7, 4.8, 4.9, 4.11, 8.1, 8.2, 8.3, 8.4, 8.5_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C5, add skipMatch with the design's describe text after upsert in McpAddJobInputShape (src/models/mcp.schema.ts:67-72); in handleAddJob replace buildMatchOffer (:38-43) with the reply function task 11 exports in the "add" context with input.skipMatch; in upsertExisting strip skipMatch with upsert and allowDuplicate (:62) and call it in the "update" context with input.skipMatch (:69-74); in handleUpdateJob call it in the "update" context with no skip flag (:29-34). Tests: in __tests__/mcpAddJob.spec.ts and __tests__/mcpUpdateJob.spec.ts add partial mocks of @/lib/scraper/automation-run/aiSettings (getUserAiSettings, default flag off) and a full mock of the queue module; with it off all existing cases stay as written. With it on assert: queued text, no "SYSTEM PROMPT:" or "save_match_result", one enqueue (Req 4.1-4.3, 4.5); a title-only add keeps its note (Req 4.6); no model gives the no-model note (Req 4.7); duplicate-without-upsert and unchanged-description replies equal the base text and never enqueue, also with skipMatch (Req 4.8); skipMatch on add and on upsert gives the skipped text and no enqueue whatever the flag (Req 8.2, 8.3, 8.5); McpAddJobSchema and McpAddJobsBatchSchema parses keep skipMatch (Req 8.1). In __tests__/mcpBatch.spec.ts add a regression-guard case that an item with skipMatch reaches handleAddJob unchanged and its line carries that item's reply (Req 4.4). Create __tests__/serverMatchFlow.spec.ts: handleAddJob through the real offer and queue to the real run with a MockLanguageModelV3 from a mocked "@/lib/ai/providers"; await whenServerMatchIdle() and assert writeJobMatch ran after the reply resolved (Req 4.11) | Restrictions: Do not add skipMatch to McpUpdateJobInputShape (requirements D4, Req 8.1); do not edit getJob.ts or addJobsBatch.ts; keep every base reply text | Success: with the setting on, adds, upserts and updates reply with the queued text and no directive and enqueue once; note and no-model cases carry their notes; duplicate and unchanged replies equal base and never enqueue; skipMatch gives the skipped text and no enqueue on add and upsert; a batch item with skipMatch reaches handleAddJob and its line carries its reply; schema parses keep skipMatch on single and batch items; the flow test saves after the reply; existing exact-text cases pass unchanged with the setting off; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 13. Tool descriptions, wiki and the generated tool list
+  - File: src/lib/mcp/toolDescriptions.ts
+  - File: __tests__/mcpToolDescriptions.spec.ts
+  - File: wiki/mcp.md
+  - File: evals/mcp-tools/tools.json
+  - Test: __tests__/mcpToolDescriptions.spec.ts — MCP_TOOL_DESCRIPTIONS
+  - Rewrite the `add_job` (:7), `update_job` (:17) and `add_jobs_batch` (:23) descriptions per design C5; document the setting and `skipMatch` in `wiki/mcp.md:76-98`; regenerate `evals/mcp-tools/tools.json`
+  - Purpose: the agent learns the reply can say the match is queued (Req 4.12)
+  - Exact values: no suite asserts these strings today; `evals/mcp-tools/tools.json` is generated, never hand-edited
+  - _Leverage: evals/mcp-tools/generate-tools.ts, evals/mcp-tools/tools.ts_
+  - _Requirements: 4.12, 8.1_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C5's MCP_TOOL_DESCRIPTIONS bullet, append the design sentence to add_job (:7) and add_jobs_batch (:23), and change update_job's "requests a fresh match analysis" (:17) to the design text. Tests: create __tests__/mcpToolDescriptions.spec.ts asserting add_job, add_jobs_batch and update_job each contain "match directive" and "queued when server-side matching is on", and add_job and add_jobs_batch contain "skipMatch" (Req 4.12). Docs: in wiki/mcp.md add to the match section (:90-98) one paragraph on the Settings → AI Provider switch "Score MCP jobs on the server" (off by default; JobSync scores added and updated jobs in the background with your model; read the result with get_job; a failure shows its reason there) and one sentence on skipMatch; follow the plain-English style of the file. Regenerate the tool list with (cd evals && npx tsx mcp-tools/generate-tools.ts) and commit the result | Restrictions: Do not edit the get_job, save_match_result or other descriptions; keep each description under 600 characters; do not hand-edit tools.json | Success: the three descriptions name the directive and the queued reply, add_job and add_jobs_batch name skipMatch; tools.json carries the new descriptions and the skipMatch property; the wiki documents the switch and the flag; lint and the full suite pass; mark in progress, log-implementation, mark complete_
+
+- [ ] 14. End-to-end: switch, skip flag and note over MCP
+  - File: e2e/mcp-server-match.spec.ts
+  - Test: e2e/mcp-server-match.spec.ts — npm run test:e2e -- e2e/mcp-server-match.spec.ts
+  - New Playwright suite over the real MCP protocol, with no provider call (design Testing Strategy, end-to-end)
+  - Purpose: prove the switch persists and the skip and note replies end to end (Req 3.2, 4.6, 8.3)
+  - Regression guard: every behaviour here shipped in tasks 5, 11 and 12, so the suite is green on first run, not red-first
+  - The queued path is not run end to end (design D10)
+  - _Leverage: e2e/mcp-write-tools.spec.ts:15-32 (FULL_POSTING), e2e/mcp-write-tools.spec.ts:157-180 (token and client setup), .spec-workflow/steering/test-data-conventions.md_
+  - _Requirements: 3.2, 4.6, 8.3_
+  - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: create e2e/mcp-server-match.spec.ts. Issue a token through Settings → MCP Access as e2e/mcp-write-tools.spec.ts:157-168 does and connect a client as :176-180 does. In Settings → AI Provider turn on the switch with id "server-side-match", reload, and assert it is still on (Req 3.2). Over MCP, call add_job with skipMatch: true and a 150-word-plus posting (copy the FULL_POSTING pattern) and assert the reply contains "Match skipped on request" and not "SYSTEM PROMPT:" (Req 8.3); call add_job with a title-only description under 40 words and assert the reply carries the thin-description note and no queued text (Req 4.6). Register every created job and the token with the cleanup fixture. In a finally block or afterEach, turn the switch off again so other MCP suites keep their directive replies and never queue a match against a real provider | Restrictions: Never add a job with a full description and no skipMatch while the switch is on (design D10, NFR testing: the queued path could reach a real provider through the env key fallback); follow the seed floors in .spec-workflow/steering/test-data-conventions.md | Success: the switch persists across a reload; the skip reply and the note reply match; the switch is off when the suite ends; npm run test:e2e -- e2e/mcp-server-match.spec.ts passes; mark in progress, log-implementation, mark complete_
+
+## Decisions taken in this document
+
+- D1 — Thinking option split into two tasks: one task for the nested-generation path, one for the two direct generation calls; options were one task for all four call sites or this split; chosen because the two paths have different test seams and mocks.
+- D2 — Where the failure columns land: with the get_job failure line; options were a schema-only task or this pairing; chosen because the schema change then has a red test, and the run task reuses the columns.
+- D3 — Handler and reply tests mock the AI settings reader and the queue module, not the settings wrapper the design names; options were mocking the wrapper or mocking the module it reads through; chosen because the wrapper is called from inside its own module, and a module-boundary mock is reliable. This changes test shape only, not behaviour.
+- D4 — Four test files the design does not name (shared write, budget, flow, tool descriptions); options were folding those checks into the design's suites or giving each task its own seam; chosen because each task then has a red test of its own.
+- D5 — Docs and the generated tool list ride with the description task; options were leaving them stale or a separate docs task; chosen because the tool list is generated from the descriptions and committed, and the wiki describes the directive-only flow.
+- D6 — The end-to-end suite turns the switch off when it ends; options were leaving it on or resetting it; chosen because the e2e user is shared, and a left-on switch would change other suites' replies and could queue a real provider call.
+- D7 — The migration is hand-written at the design's path and applied with migrate deploy; options were migrate dev (which names its own folder) or this; chosen because the design pins the folder name and the e2e dev server reads the same database.
+
+## Scope notes
+
+- Carried from design: none.
+- Every design component has a task: C1 tasks 1-2, C2 task 3, C3 tasks 4-5, C4 task 11, C5 tasks 12-13, C6 task 9, C7 task 7, C8 tasks 8 and 10, C9 and the Job columns task 6.
+- Added beyond the design: the wiki paragraph and the regenerated tool list (D5), and four test files (D4).
+- Not cut: nothing the decomposition entry or the design lists is cut or deferred.
+- Out of scope as in the requirements: a separate match model, prompt changes, scoring app-added jobs, the chat's thinking setting, and the jobscout change that sets the skip flag.
+- The steering file structure.md does not exist; tasks follow the paths the design pins.
+
+## Revision History
+
+- **v1** (2026-10-31) — Initial draft.

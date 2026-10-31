@@ -143,3 +143,48 @@
 - __tests__/AiSettings.spec.tsx:6-9 — userSettings.actions mocked with two functions.
 - __tests__/mcpAddJob.spec.ts:10-34 — module mocks; no settings mock.
 - e2e/mcp-write-tools.spec.ts:15-32 — FULL_POSTING fixture.
+
+## Tasks phase — call sites and seams
+- src/lib/agent/nestedGeneration.ts:25-42 — NestedGenerationArgs type.
+- src/lib/agent/tools/matchJob.ts:48-70 — job and resume lookup, preprocess pair.
+- src/lib/scraper/automation-run/match.ts:1-23 — imports getModel and parseJobMatch from the "@/lib/ai" barrel.
+- src/lib/scraper/automation-run/aiSettings.ts:33 — DeepSeek default returns DEEPSEEK_CHAT.
+- src/actions/automation/analyze.ts:1-25 — imports: db, requireUser, "@/lib/ai" barrel, profile and job actions, automation logger.
+- src/actions/automation/analyze.ts:92-127 — withSpan around generateText.
+- src/components/settings/AiSettings.tsx:147-156 — fetch error falls back to the enum list.
+- src/actions/userSettings.actions.ts:48-50 — updateUserSettings parameter type.
+- src/actions/job/status.ts:60-63 — saveJobMatchResult inline prisma.job.update.
+- src/lib/mcp/tools/addJob.ts:38-43 — handleAddJob buildMatchOffer call.
+- src/lib/mcp/tools/addJob.ts:69-74 — upsertExisting buildMatchOffer call.
+- src/lib/mcp/tools/updateJob.ts:29-34 — handleUpdateJob buildMatchOffer call.
+- src/lib/mcp/tools/addJobsBatch.ts:15-25 — each item passed to handleAddJob unchanged.
+- src/lib/mcp/tools/getJob.ts:47-48 — day helper.
+- src/lib/mcp/rate-limit.ts:19 — MAX read once at load.
+- src/models/mcp.schema.ts:67-72 — upsert field, last in McpAddJobInputShape.
+- src/lib/constants.ts:75 — AI_OLLAMA_NUM_CTX 8192.
+- prisma/schema.prisma:476 — Job.descriptionCompleteness.
+- prisma/migrations/20260712184644_add_resume_review_data/migration.sql:1-2 — single ADD COLUMN migration style.
+- docker-entrypoint.sh:11 — migrate deploy at container start.
+- src/lib/mcp/toolDescriptions.ts:7 — add_job description.
+- src/lib/mcp/toolDescriptions.ts:17 — update_job description.
+- src/lib/mcp/toolDescriptions.ts:23 — add_jobs_batch description.
+- evals/mcp-tools/generate-tools.ts:1-9 — writes tools.json from the descriptions and shapes.
+- evals/mcp-tools/tools.ts:1-49 — tool list built from MCP_TOOL_DESCRIPTIONS and the input shapes.
+- wiki/mcp.md:76-77 — add_job and add_jobs_batch entries.
+- wiki/mcp.md:90-98 — match and review section.
+
+## Tasks phase — tests
+- __tests__/agentNestedGeneration.spec.ts:4-8 — partial "ai" mock replacing streamText.
+- __tests__/agentNestedGeneration.spec.ts:42-58 — providerOptions.ollama assertions.
+- __tests__/agentMatchJobTool.spec.ts:142-158 — match_job prompt, temperature, ollama options assertions.
+- __tests__/AiSettings.spec.tsx:63-97 — DeepSeek cases with a live list naming deepseek-chat.
+- __tests__/mcpAddJob.spec.ts:10-36 — module mocks for create, update, lookups, preprocess, rate limit.
+- __tests__/mcpUpdateJob.spec.ts:14-17 — partial matchDirective mock.
+- __tests__/mcpBatch.spec.ts:6 — handleAddJob fully mocked.
+- __tests__/mcpGetJob.spec.ts:8-11 — @prisma/client mock.
+- __tests__/mcpGetJob.spec.ts:27-60 — minimalJob fixture.
+- __tests__/mcpGetJob.spec.ts:210-240 — absent fields and hidden score cases.
+- __tests__/mcpRateLimit.spec.ts:1-40 — checkMcpRateLimit cases against APP_CONSTANTS.MCP_RATE_LIMIT_MAX.
+- __tests__/job.actions.spec.ts:1711-1763 — saveJobMatchResult cases.
+- e2e/mcp-write-tools.spec.ts:157-180 — token issue through Settings and MCP client setup.
+- .spec-workflow/steering/test-data-conventions.md:1-46 — seed floors for resumes and descriptions.
