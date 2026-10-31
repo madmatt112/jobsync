@@ -2,7 +2,7 @@
 
 ## Overview
 
-JobSync scores MCP-added jobs itself: an MCP add or description update, with the new setting on, puts the job on an in-process match queue, and a background run calls the user's provider with the in-app Match prompt, preprocessing and parser, then saves the result. The queue sits beside the MCP tool handlers under `src/lib/mcp/serverMatch/`, and the reply decision wraps the existing `buildMatchOffer` (`src/lib/mcp/tools/matchDirective.ts:65-141`). Every match call (in-app, automation, on-demand analysis, server-side) gains one shared provider-options constant that turns DeepSeek thinking off.
+JobSync scores MCP-added jobs itself: an MCP add or description update, with the new setting on, puts the job on an in-process match queue, and a background run calls the user's provider with the in-app Match prompt, preprocessing and parser, then saves the result. The reply decision wraps the existing `buildMatchOffer` (`src/lib/mcp/tools/matchDirective.ts:65-141`). Every match call (in-app, automation, on-demand analysis, server-side) gains one shared provider-options constant that turns DeepSeek thinking off.
 
 ## Steering Document Alignment
 
@@ -102,7 +102,7 @@ graph TD
   7. Build `matchData` (Data Models) and call `writeJobMatch(userId, jobId, scores.matchScore, JSON.stringify(matchData))` (C7) → `"saved"` (Req 5.5, 5.6). A Prisma `P2025` from the write means the job is gone → `"dropped"` (Req 7.6).
 - **Fail:** call `recordServerMatchFailure(userId, jobId, reason)`. It runs `prisma.job.updateMany({ where: { id: jobId, userId }, data: { serverMatchError: reason, serverMatchFailedAt: new Date() } })`. A count of 0 → `"dropped"`, with no record and no error line. Otherwise it logs one `log.error("[server-match] match failed", { jobId, userId, provider, model, reason })` → `"failed"` (Req 7.3). The fail path never writes `matchScore` or `matchData`, so an existing match stays (Req 7.2, requirements D10).
 - **Reasons (exact, closed set):** "No resume could be resolved — set a default resume in Profile → Resumes." · "The job description could not be prepared for matching." · "The resume could not be prepared for matching." · "Provider error: " plus the error message cut to 200 characters · "Timed out after N s." (N = `timeoutMs / 1000`, used when the timeout signal aborted) · "The generation stopped early (finish reason: X)." · "The reply had no SCORES line."
-- **Telemetry:** reuse `SURFACES.JOB_MATCH` (`src/lib/telemetry/genai.ts:7-14`), which the on-demand analysis already uses for the shared prompt (`src/actions/automation/analyze.ts:100-109`). The span adds `jobsync.user_id` and `jobsync.job_id`.
+- **Telemetry:** reuse `SURFACES.JOB_MATCH` (`src/lib/telemetry/genai.ts:7-14`; the on-demand analysis already uses it for the shared prompt, `src/actions/automation/analyze.ts:100-109`). The span adds `jobsync.user_id` and `jobsync.job_id`.
 
 ### C7 — Shared match write (`writeJobMatch`)
 - **Purpose:** One user-id-scoped write for `saveJobMatchResult` and the server match (Req 5.5).
@@ -175,10 +175,10 @@ This fits `JobMatchData` (`src/models/ai.schemas.ts:60-76`) with no type change.
 
 ## Error Handling
 
-1. **Settings read throws (corrupt JSON):** read as off; base reply, the add does not fail.
+1. **Settings read throws (corrupt JSON):** read as off; the add does not fail.
 2. **Run failure (provider, timeout, finish reason, no scores, unreadable input):** C6 records the reason; the "queued" reply already returned and the existing match stays (Req 7.1, 7.2).
-3. **Job deleted:** C6 ends `"dropped"` — no record, no error line (Req 7.6).
-4. **Unexpected throw in `drive`:** caught and logged; the entry clears or re-runs, others continue.
+3. **Job deleted:** C6 ends `"dropped"`, no record or error line (Req 7.6).
+4. **Unexpected throw in `drive`:** caught and logged; others continue.
 5. **Process restart:** the queue is lost; re-score with `get_job` + `matchDirective: true` or in-app Match.
 
 ## Testing Strategy
@@ -261,7 +261,7 @@ No test calls a real provider. Each generation test stubs `getModel` (`vi.mock("
   - concurrency and budget values (C8, D5);
   - failure storage (D7);
   - telemetry surface (D11).
-- Not cut: every requirement is covered. The end-to-end test leaves out the queued path (D10); integration tests cover it.
+- Not cut: every requirement is covered.
 - Out of scope as in the requirements.
 
 ## Revision History
@@ -270,5 +270,6 @@ No test calls a real provider. Each generation test stubs `getModel` (`vi.mock("
   - **R1-1 — Partially accepted (SHOULD_FIX).** Rewrote D13 to scope the skipped text to the paths that reach the reply decision; the early returns — duplicate without upsert, unchanged description, rate-limit and error — keep their base reply, since skip never reaches the enqueue there and no match was on offer. This scopes Req 8.3 to the offer paths while Req 8.2's no-queue holds everywhere; added a duplicate-with-skip integration case and noted the same scoping on the C5 bullet.
   - **R1-2 — Accepted (MINOR).** Dropped the matchData illustrative hedge and committed the shape.
   - **R1-3 — Accepted (MINOR).** Added a note that the Ollama-one bound covers server matches only, not the automation runner's or in-app Match's Ollama use.
+  - **Lint pass.** 0 fixed; L-1–29 all rejected as citation-lint artifacts (@-scoped node_modules paths that resolve on the real tree, identifiers this design newly introduces, or symbols cited elsewhere and only name-referenced here).
 - **v1** (2026-10-30) — Initial draft.
   - **Lint pass.** 13 fixed. Rejected: L-3,5,6,7,8,38,39 @-scoped node_modules paths resolve on the real tree (linter artifact); L-10,13,15,18,21,31,34,36 new identifiers this design adds; L-12,14,20,22,23,24,25,30,32,33,37,40 builtins or symbols cited elsewhere.
