@@ -2,11 +2,11 @@
 
 ## Introduction
 
-JobSync scores jobs that arrive over MCP itself, with the user's configured AI provider and model, so a job that jobscout pushes gets a match without a Claude session that follows the match directive. The feature is for the operator who runs jobscout against JobSync and wants consistent matches at a lower cost than Claude. It adds an opt-in user setting, a background match queue for MCP adds and description updates, a per-job skip flag, and thinking-disabled DeepSeek calls on every match surface.
+JobSync scores jobs that arrive over MCP itself, with the user's configured AI provider and model, so a job jobscout pushes gets a match without a Claude session following the match directive. It serves the operator who runs jobscout against JobSync and wants consistent matches at a lower cost than Claude. It adds an opt-in setting, a background match queue for MCP adds and description updates, a per-job skip flag, and thinking-disabled DeepSeek calls on every match surface.
 
 ## Alignment with Product Vision
 
-The steering file product.md does not exist in this repository, so this section aligns with the decomposition entry instead. The entry states the aim: consistent matching at a lower cost than Claude, based on the bake-off in which DeepSeek with thinking off agreed with the operator's tier more often than Claude's stored matches did. The feature keeps one match method (the prompt, preprocessing and parser that the mcp-write-tools spec made common to every surface) and changes only who runs it.
+The steering file product.md does not exist, so this section aligns with the decomposition entry: consistent matching at a lower cost than Claude, from the bake-off where DeepSeek with thinking off agreed with the operator's tier more often than Claude's stored matches did. The feature keeps one match method — the prompt, preprocessing and parser the mcp-write-tools spec made common to every surface — and changes only who runs it.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ The "offer" below is the directive-or-note decision `buildMatchOffer` makes toda
 4. WHEN `add_jobs_batch` runs with the setting on THEN each item SHALL follow criteria 1 and 3, and each item's labelled line SHALL carry that item's own reply.
 5. WHEN a reply states that a match is queued THEN the reply SHALL contain neither the text `SYSTEM PROMPT:` nor the text `save_match_result`.
 6. IF the setting is on AND the offer would be a note (title-only description, job not loadable, no resolvable resume, unreadable job, unreadable resume) THEN JobSync SHALL not queue a match, and the reply SHALL carry that same note.
-7. IF the setting is on AND the user's AI settings have no model THEN JobSync SHALL not queue a match, and the reply SHALL carry a note that says no AI model is configured and points to Settings.
+7. IF the setting is on AND the offer would be a directive AND the user's AI settings have no model THEN JobSync SHALL not queue a match, and the reply SHALL carry a note that says no AI model is configured and points to Settings. (The offer is computed before this check, so a note case follows criterion 6 instead; see D5.)
 8. IF `update_job` does not change the description, OR `add_job` reports a duplicate without `upsert` THEN JobSync SHALL not queue a match, and the reply SHALL be unchanged from base. (Invariant — verified, not red-first.)
 9. WHEN `get_job` is called with `matchDirective: true` and the setting is on THEN the reply SHALL still carry the match directive, as at base, and SHALL not queue a match. (Invariant — verified, not red-first.)
 10. WHEN a match for a job is queued and has not started AND another call would queue a match for the same job THEN JobSync SHALL keep one queued match for that job, not two.
@@ -91,7 +91,7 @@ The "offer" below is the directive-or-note decision `buildMatchOffer` makes toda
 
 #### Acceptance Criteria
 
-1. WHILE server-side matches run THEN the number of generations in flight across the process SHALL not exceed a concurrency constant, and SHALL be 1 when the provider is Ollama, as `getAutomationMatchLimit` does (`src/lib/scraper/automation-run/aiSettings.ts:18-24`).
+1. WHILE server-side matches run THEN one process-wide limiter SHALL hold the generations in flight to a concurrency constant, and to 1 when the provider is Ollama — the Ollama=1 / else-constant rule of `getAutomationMatchLimit` (`src/lib/scraper/automation-run/aiSettings.ts:18-24`), applied as a single shared limiter, not the per-call `pLimit` that function returns.
 2. WHEN a server-side match starts THEN it SHALL count against a per-user match budget of its own, and SHALL not count against the `"default"` or `"chat"` buckets of `checkRateLimit` (`src/lib/ai/rate-limiter.ts:17-78`).
 3. WHEN the match budget is configured THEN it SHALL be at least `MCP_RATE_LIMIT_MAX` per `MCP_RATE_LIMIT_WINDOW_MS` (`src/lib/constants.ts:150-151`), so 50 jobs added through five 10-item `add_jobs_batch` calls within one hour all get matched within that hour, subject to provider speed.
 4. IF a user's match budget is spent THEN later queued matches for that user SHALL wait and run after the window resets; they SHALL not fail for that reason.
@@ -106,7 +106,7 @@ The "offer" below is the directive-or-note decision `buildMatchOffer` makes toda
 1. WHEN a queued match fails for any reason THEN the job SHALL stay saved, and the MCP reply that queued it SHALL already have been returned unchanged.
 2. WHEN the generation throws, times out, finishes without the `"stop"` finish reason, or returns text with no scores line, OR the resume or job no longer preprocesses THEN JobSync SHALL not write `matchScore` or `matchData`, and an existing match on the job SHALL stay as it was.
 3. WHEN a queued match fails THEN JobSync SHALL record on the job the failure reason and time, and SHALL log one error line with the job id, user id, provider, model and reason.
-4. WHEN `get_job` reads a job whose latest server-side match failed after its last saved match THEN the Match section SHALL state that the server-side match failed and give the recorded reason.
+4. WHEN `get_job` reads a job whose latest server-side match failed with no successful match saved since, whether or not the job was ever scored, THEN the Match section SHALL state that the server-side match failed and give the recorded reason.
 5. WHEN a later server-side match for that job succeeds THEN `get_job` SHALL no longer show the failure.
 6. IF the job is deleted before its queued match runs THEN the match SHALL be dropped without a write and without a failure record.
 
@@ -140,28 +140,29 @@ The "offer" below is the directive-or-note decision `buildMatchOffer` makes toda
 
 ## Decisions taken in this document
 
-- D1 — Money, personal data and legal posture: options were opt-in with the user's own provider key and no new data surface, on by default for MCP users, a separate JobSync-billed match service; chosen because JobSync has no billing, so there are no refunds, credits or forfeiture, spend is the user's own provider cost bounded by the match budget, the resume and posting go to the same provider the user already chose for in-app Match, and the match lives on the job row and is erased with it, so no new retention or erasure rule is needed.
-- D2 — Where the queue lives: options were an in-process queue that a restart drops, a database-backed queue that survives restarts, a job on the existing cron scheduler; chosen because the app runs as one standalone Node process with an in-process scheduler already, and a lost match is cheap to redo.
-- D3 — How a failure is recorded: options were a reason and time on the job shown by get_job plus a log line, a log line only, a failure body written into the match data; chosen because jobscout reads jobs over MCP and needs to see why a job has no score, and writing into the match data would destroy an existing good match.
-- D4 — Skip flag scope: options were honour the flag whatever the setting, honour it only when the setting is on, ignore it and leave skipping to jobscout; chosen because "do not score this job" saves cost on both paths, and replies without the flag stay unchanged when the setting is off.
-- D5 — When the reply says queued: options were check the existing note conditions and a configured model before queuing, queue always and record a failure later, queue always and say nothing; chosen because the reply then tells jobscout the truth at once, and the note texts already exist.
-- D6 — Missing model: options were refuse with a note as the chat route does, fall back to the provider default as the automation runner does; chosen because the in-app Match refuses, and a model the user never chose is a hidden cost.
-- D7 — get_job with the directive flag stays a directive when the setting is on: options were keep the directive, queue a server match instead; chosen because the decomposition lists only adds and description updates, and an explicit directive request is the agent's own re-score path.
-- D8 — Thinking-disabled scope: options were every match call including the automation runner and on-demand analysis, only the in-app and server-side match, every nested generation; chosen because the decomposition names every match surface and keeps the chat out, and resume review and cover letters are not match calls.
-- D9 — Retired DeepSeek aliases: options were send the stored name unchanged, map it to the new model at call time, migrate stored settings; chosen because the bake-off notes record that DeepSeek serves both aliases with the new model, so nothing breaks and no data changes.
-- D10 — Existing match on a description update: options were keep it until the new match saves, clear it when the match is queued; chosen because a failed re-score must not leave the job with nothing, and the match date shows its age.
-- D11 — Over-budget matches wait: options were wait for the window, fail with a recorded reason; chosen because the budget protects provider spend rate, not the job, and waiting needs no retry from the caller.
-- D12 — Budget size floor: options were at least the MCP hourly budget, a smaller fixed number; chosen because each MCP add already costs one MCP unit, so the MCP budget stays the binding limit and every added job can be matched in the same hour.
-- D13 — Skip flag name is skipMatch: options were skipMatch, noMatch, match set to false; chosen because it reads as a request and matches the camel-case style of upsert and allowDuplicate.
-- D14 — Duplicate queued matches collapse: options were one queued match per job, one per call; chosen because the match reads the description at run time, so a second queued match would score the same text twice.
+- D1 — Money, personal data and legal posture: opt-in with the user's own provider key, no new data surface; chosen because JobSync has no billing, spend is the user's own provider cost bounded by the match budget, the resume and posting go to the provider already chosen for in-app Match, and the match lives on the job row and is erased with it.
+- D2 — Where the queue lives: an in-process queue that a restart drops; chosen because the app runs as one standalone Node process with an in-process scheduler already, and a lost match is cheap to redo.
+- D3 — How a failure is recorded: a reason and time on the job shown by get_job plus a log line; chosen because jobscout needs to see over MCP why a job has no score, and a body in the match data would destroy an existing good match.
+- D4 — Skip flag scope: honour the flag whatever the setting; chosen because "do not score this job" saves cost on both paths, and replies without the flag stay unchanged when the setting is off.
+- D5 — When the reply says queued: check the note conditions and a configured model before queuing; chosen because the reply then tells jobscout the truth at once. The two checks are ordered: the offer is computed first, so a note case carries its note; only a would-be directive falls to the no-model check.
+- D6 — Missing model: refuse with a note as the chat route does; chosen because the in-app Match refuses, and a model the user never chose is a hidden cost.
+- D7 — get_job with the directive flag stays a directive when the setting is on; chosen because the decomposition lists only adds and description updates, and an explicit directive request is the agent's own re-score path.
+- D8 — Thinking-disabled scope: every match call including the automation runner and on-demand analysis; chosen because the decomposition names every match surface and keeps the chat out, and resume review and cover letters are not match calls.
+- D9 — Retired DeepSeek aliases: send the stored name unchanged; chosen because the bake-off notes record that DeepSeek serves both aliases with the new model, so nothing breaks and no data changes.
+- D10 — Existing match on a description update: keep it until the new match saves; chosen because a failed re-score must not leave the job with nothing, and the match date shows its age.
+- D11 — Over-budget matches wait for the window rather than fail; chosen because the budget protects provider spend rate, not the job, and waiting needs no retry from the caller.
+- D12 — Budget size floor at least the MCP hourly budget; chosen because each MCP add already costs one MCP unit, so the MCP budget stays the binding limit and every added job can be matched in the same hour.
+- D13 — Skip flag name is skipMatch; chosen because it reads as a request and matches the camel-case style of upsert and allowDuplicate.
+- D14 — Duplicate queued matches collapse to one per job; chosen because the match reads the description at run time, so a second queued match would score the same text twice.
 
 ## Scope notes
 
 - Carried items from the decomposition: none.
-- The decomposition says to save with `saveJobMatchResult`. That action resolves the user from the session through `requireUser` (`src/actions/job/status.ts:52-70`, `src/actions/shared.ts:6-12`), and a background match has no session. Requirement 5 criterion 5 keeps the same write and leaves to the design how a user-id-scoped path shares it.
+- The decomposition says to save with `saveJobMatchResult`, which resolves the user from the session through `requireUser` (`src/actions/job/status.ts:52-70`, `src/actions/shared.ts:6-12`); a background match has no session, so Requirement 5 criterion 5 keeps the write but leaves the user-id-scoped path to the design.
 - The decomposition's "50-job batch" is five calls: `add_jobs_batch` takes at most `MCP_BATCH_MAX_ITEMS` (10) items (`src/models/mcp.schema.ts:334-336`, `src/lib/constants.ts:163`). Requirement 6 states the scenario that way.
 - The "5-per-minute interactive budget" is the `"default"` bucket of `checkRateLimit`; the in-app Match runs inside the chat turn, which uses the `"chat"` bucket. Requirement 6 keeps server matches out of both.
-- Deferred to design: the setting's storage key and label, the queued, skipped and no-model reply texts, the surface value, the concurrency constant and budget values, and where the failure record is stored.
+- Deferred to design: the setting's storage key and label, the queued, skipped and no-model reply texts, the surface value, the concurrency constant and budget values, where the failure record is stored, and the telemetry `jobsync.surface` value for the match (reuse `job.match` or add one; `src/lib/telemetry/genai.ts:7-14` holds `SURFACES` at six).
+- Requirement 2 constrains the DeepSeek default and the fallback list (`src/components/settings/AiSettings.tsx:76-87`). The settings dropdown is populated from the live `/models` endpoint (`src/lib/ai/provider-registry.ts:70-71`), falling back to that list only when the fetch fails or is empty (`src/components/settings/AiSettings.tsx:124-156`); what the dropdown offers mirrors DeepSeek's catalogue, which this spec does not control, and is out of scope.
 - Out of scope, as the decomposition states: a match provider or model separate from the chat setting; prompt changes; scoring jobs added in the app; the agent chat's thinking setting; the jobscout change that sets `skipMatch`.
 - Out of scope: the automation runner's own prompt (`AUTOMATION_JOB_MATCH_SYSTEM_PROMPT`) stays as it is; only its thinking option changes.
 - Not cut: nothing the decomposition entry lists is cut or deferred to a later spec.
@@ -169,5 +170,11 @@ The "offer" below is the directive-or-note decision `buildMatchOffer` makes toda
 
 ## Revision History
 
+- **v2** (2026-10-30) — Round-1 adversarial response (adversarial-analysis-requirements.md, verdict iterate 0/2/3).
+  - **R1-1 — Partially accepted (SHOULD_FIX).** Added a scope note binding Requirement 2 to the default and the fallback list only; the live models dropdown mirrors DeepSeek's own catalogue, which this spec does not control, and is out of scope.
+  - **R1-2 — Accepted (SHOULD_FIX).** Scoped Requirement 4 criterion 7 to a would-be directive and ordered the two pre-queue checks in D5, so a no-model title-only add now carries the criterion-6 note, not the no-model note.
+  - **R1-3 — Partially accepted (MINOR).** Added the match's telemetry surface to the deferred-to-design list, noting the surfaces set is closed at six.
+  - **R1-4 — Accepted (MINOR).** Reworded Requirement 6 criterion 1 to one process-wide limiter, keeping the cited helper only for the Ollama-one, else-constant rule.
+  - **R1-5 — Accepted (MINOR).** Reworded Requirement 7 criterion 4 to "no successful match saved since, whether or not the job was ever scored."
 - **v1** (2026-10-30) — Initial draft.
   - **Lint pass.** 2 fixed; rejected: L-1..L-5 (node_modules/@ai-sdk/deepseek paths exist in the tree, the linter does not resolve outside the code root; the probe legitimately cites the installed library), L-6/L-7 (`review_resume`/`generate_cover_letter` are nested-generation label names passed to the generic `runNestedGeneration`; the citation correctly names the shared path both run through, not a definition site), L-10/L-12/L-13 (`get_job`, `add_jobs_batch` are MCP wire tool names used as prose; the code symbols are `handleGetJob`/`McpAddJobsBatchSchema`, and the cited ranges and constants are correct).
