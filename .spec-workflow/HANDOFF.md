@@ -20,6 +20,7 @@
 | 2026-10-08 | mcp-write-tools | retrospective |  | retro-ready |  |
 | 2026-10-08 | mcp-write-tools | retrospective | APPROVED | retro-ready | plan approved: 14 proposals, P1/P12/P13 option (a), P15 no change |
 | 2026-10-08 | mcp-write-tools | closeout | items 14/14 | closed | 10 done, 3 skipped, 1 to-do; PRs jobsync#4 swm#87 |
+| 2026-10-31 | server-side-match | requirements | v3 | approved | 3 rounds |
 
 ## mcp-write-tools — requirements
 
@@ -76,3 +77,16 @@
 | PRs | jobsync PR #4 https://github.com/madmatt112/jobsync/pull/4 (branch chore/mcp-write-tools-retro, 2 commits) — open, not merged. spec-workflow-mcp PR #87 https://github.com/madmatt112/spec-workflow-mcp/pull/87 (branch chore/mcp-write-tools-harness, 6 commits) — open, not merged. Overwatch merges both. |
 | Deferrals | d-0c0f40e9 resolved by P5 (jobsync PR #4). |
 | Gotchas | Both retro worktrees remain under `.claude/worktrees/` (jobsync: mcp-write-tools-retro; swm: mcp-write-tools-harness); remove them after the PRs land. jobsync spec store is git-excluded, so P9's steering file and all spec-store commits are on-disk only, not version-controlled. The unrelated one-line jobsync `.gitignore` change in the main checkout was left unstaged. swm PR #87 was rebased on origin/main at open (origin/main had not moved). |
+
+## server-side-match — requirements
+
+| Field | Value |
+| --- | --- |
+| State | approved at v3 on 2026-10-31 |
+| Rounds | 3; verdicts should-fix-only → converged |
+| Approval | `approval_1793411970847_h1dr0eqka` |
+| Rulings | none |
+| Cut scope | none |
+| Carried items | none |
+| Next phase loads | codebase-context.md |
+

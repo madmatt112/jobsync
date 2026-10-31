@@ -1,0 +1,12 @@
+{
+  "id": "approval_1793411970847_h1dr0eqka",
+  "title": "server-side-match requirements v3",
+  "filePath": ".spec-workflow/specs/server-side-match/requirements.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-10-31T01:59:30.847Z",
+  "category": "spec",
+  "categoryName": "server-side-match",
+  "response": "v3; 3 review rounds; final verdict MUST_FIX 0 / SHOULD_FIX 0 / MINOR 0; rulings: none; cap: not hit",
+  "respondedAt": "2026-10-31T01:59:30.887Z"
+}

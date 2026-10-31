@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/server-side-match/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-10-31T01:59:30.863Z",
+      "trigger": "initial",
+      "approvalId": "approval_1793411970847_h1dr0eqka",
+      "approvalTitle": "server-side-match requirements v3"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-10-31T01:59:30.884Z",
+      "trigger": "approved",
+      "approvalId": "approval_1793411970847_h1dr0eqka",
+      "approvalTitle": "server-side-match requirements v3"
+    }
+  ]
+}
