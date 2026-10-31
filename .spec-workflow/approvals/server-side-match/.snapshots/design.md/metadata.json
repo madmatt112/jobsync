@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/server-side-match/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-10-31T17:40:13.862Z",
+      "trigger": "initial",
+      "approvalId": "approval_1793468413853_eq3eumshx",
+      "approvalTitle": "server-side-match design v2"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-10-31T17:40:13.881Z",
+      "trigger": "approved",
+      "approvalId": "approval_1793468413853_eq3eumshx",
+      "approvalTitle": "server-side-match design v2"
+    }
+  ]
+}

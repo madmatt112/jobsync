@@ -21,6 +21,7 @@
 | 2026-10-08 | mcp-write-tools | retrospective | APPROVED | retro-ready | plan approved: 14 proposals, P1/P12/P13 option (a), P15 no change |
 | 2026-10-08 | mcp-write-tools | closeout | items 14/14 | closed | 10 done, 3 skipped, 1 to-do; PRs jobsync#4 swm#87 |
 | 2026-10-31 | server-side-match | requirements | v3 | approved | 3 rounds |
+| 2026-10-31 | server-side-match | design | v2 | approved | 2 rounds |
 
 ## mcp-write-tools — requirements
 
@@ -85,6 +86,19 @@
 | State | approved at v3 on 2026-10-31 |
 | Rounds | 3; verdicts should-fix-only → converged |
 | Approval | `approval_1793411970847_h1dr0eqka` |
+| Rulings | none |
+| Cut scope | none |
+| Carried items | none |
+| Next phase loads | codebase-context.md |
+
+
+## server-side-match — design
+
+| Field | Value |
+| --- | --- |
+| State | approved at v2 on 2026-10-31 |
+| Rounds | 2; verdicts converged |
+| Approval | `approval_1793468413853_eq3eumshx` |
 | Rulings | none |
 | Cut scope | none |
 | Carried items | none |

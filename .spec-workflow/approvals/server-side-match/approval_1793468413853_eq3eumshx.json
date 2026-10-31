@@ -1,0 +1,12 @@
+{
+  "id": "approval_1793468413853_eq3eumshx",
+  "title": "server-side-match design v2",
+  "filePath": ".spec-workflow/specs/server-side-match/design.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-10-31T17:40:13.853Z",
+  "category": "spec",
+  "categoryName": "server-side-match",
+  "response": "v2; 2 review rounds; final verdict MUST_FIX 0 / SHOULD_FIX 0 / MINOR 0; rulings: none; cap: not hit",
+  "respondedAt": "2026-10-31T17:40:13.884Z"
+}

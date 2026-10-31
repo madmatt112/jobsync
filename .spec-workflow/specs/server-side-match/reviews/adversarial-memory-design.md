@@ -1,28 +1,28 @@
 # Adversarial Review Memory — design
 
-Last updated: 2026-10-31 (round 1, v1)
+Last updated: 2026-10-31 (after v2 review)
 
 ## Cumulative Findings Summary
 
 ### Accepted
-- (none yet — awaiting reviser disposition)
+- **R1-2 (MINOR, v1)** — matchData "Illustrative" hedge. Accepted: dropped in v2, shape committed. Verified complete in round 2 (`parseJobMatch` returns exactly `{matchScore,recommendation}`; all fields fit `JobMatchData`).
+- **R1-3 (MINOR, v1)** — Cross-surface Ollama concurrency note. Accepted: one-line scope note added to C8 step 2 in v2. Correct.
 
 ### Partially Accepted
-- (none yet)
+- **R1-1 (SHOULD_FIX, v1)** — Req 8.3 ("state skipped, whatever the setting") vs the early-return paths. Partially accepted in v2: reviser scoped Req 8.3 to the offer paths in D13, named Req 4.8 as governing the early returns, added the C5 "`skipMatch` does not alter them — D13" note, and added a duplicate-without-upsert+skip integration case. This is the exact option round 1 offered as acceptable. **Closed** — recorded in v2 Revision History; do not re-open.
 
 ### Rejected
-- (none yet)
+- (none)
 
 ### Unresolved
-- **R1-1 (SHOULD_FIX)** — Req 8.3 ("reply SHALL state skipped, whatever the setting") vs D13. On the non-create paths — duplicate-without-`upsert` (`addJob.ts:27-36`, returns before `resolveMatchReply`), unchanged-description, rate-limit-exceeded, and the `catch` error reply — a `skipMatch:true` add keeps the base reply and never states "skipped on request." D13 justifies this by "the requirements fix those replies at base," but only Req 4.8 (no-skip invariant) does so; Req 4.8 is silent on `skipMatch:true`, so 8.3 and 4.8 collide and the design picks 4.8 without recording the override. Testing Strategy omits duplicate+skip / error+skip, so it is neither covered nor caught. Fix: emit skipped text on those paths, OR explicitly scope 8.3 to offer-composing paths and add a duplicate+skip test.
-- **R1-2 (MINOR)** — `matchData` carries an "Illustrative — verify against the test fake" hedge though Req 5.6 references it; all fields are enumerated and fit `JobMatchData` (`ai.schemas.ts:60-76`), so adequate, but commit the shape.
-- **R1-3 (MINOR)** — server-match `ollamaGate` (`pLimit(1)`) does not coordinate with automation/in-app Ollama use; >1 Ollama generation can run process-wide across surfaces. Within Req 6.1's scope (server matches only) and pre-existing, so not a defect — wants a one-line scope note.
+- (none)
 
 ## Patterns & Themes
-- The design is unusually well-probed: every delta citation, every library-capability claim (`@ai-sdk/deepseek` 2.0.4, `ai` 6.0.256, the `ai/test` mock harness), Data Models, and the security user-id flow were verified accurate against the installed tree. Round-1 pressure should concentrate on requirement-to-design *semantic* gaps, not citation accuracy.
-- The one real soft spot is the skip-flag's interaction with the early-return reply paths — a place where an approved SHALL ("whatever the setting") meets a design decision that narrows it.
+- The design is unusually well-probed; two rounds have found one real SHOULD_FIX (R1-1) and three MINORs, all now dispositioned. Round-2 pressure on citations, Data Models, library probes, security, budget/limiter and failure-line all confirmed sound again.
+- R1-1's resolution is a design-level scoping of an approved requirement's literal text. It is defensible only because round 1 explicitly offered scoping as acceptable. Had it not, this would be a design-vs-requirement seam worth a MUST_FIX. Note for any future requirements-doc review: Req 8.3 still reads "whatever the setting" unconditionally while the design narrows it — a latent artifact-consistency wrinkle, but closed by ruling for the design.
+- New verification this round: `resolveJobForAgent` uses `findFirst` with no `select`, so all Job scalars (`resumeId`, `descriptionCompleteness`) are available to C6 — the codebase-context's "title/company/location" names only the includes.
 
 ## Guidance for Next Review
-- Re-probe R1-1's disposition first: did the reviser emit skipped text on the duplicate/unchanged/error paths, or scope Req 8.3 and add the duplicate+skip test? If scoped, confirm the scope note names Req 4.8 as the governing invariant and does not contradict Req 8.3's approved text — this is a requirements-deviation, so watch that the reviser does not quietly edit the closed requirements instead of the design.
-- Do not re-litigate the verified-sound areas (C9 `matchedAt`, C8 budget/limiter, C1 library probes, security NFR, migration style, `updateUserSettings` callers) without new evidence.
-- Fresh lenses still available for later rounds: restart/crash recovery wording vs NFR reliability; multi-user limiter fairness; test-double fidelity (`doGenerateCalls` assertions vs real provider option merge order).
+- If a round 3 happens, the only live residue is R2-1 (MINOR): unchanged-description+skip and error-path+skip are untested alongside the duplicate+skip case. Nice-to-have, not loop-keeping.
+- Do NOT re-open R1-1 scoping — closed by ruling. Do not re-litigate the verified-sound areas: matchData shape/parse output, `resolveJobForAgent` fields, C8 budget/limiter, FIFO multi-user fairness (requirement-mandated), restart wording, C1 library probes, security user-id flow, C9 `matchedAt` supersession.
+- Remaining unused lenses are largely exhausted; a clean round is the expected result unless a later delta introduces a claim error.
