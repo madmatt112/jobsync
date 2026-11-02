@@ -49,6 +49,25 @@ function extractJobId(text: string): string {
 // skipMatch and a thin description both reply without ever reaching the
 // queued path, so no real provider is called (Req 4.6, 8.3; design D10).
 test.describe("MCP server-side match", () => {
+  // The restriction barring this suite from the live instance means it runs
+  // against a throwaway db that carries no seeded admin account, unlike the
+  // persistent e2e instance other suites assume. Seed it here (same flow as
+  // the untracked e2e-local.setup.ts) so the fixtures' `page` login succeeds
+  // without relying on that gitignored, non-wired-in global setup.
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await page.goto("/signup");
+    await page.getByPlaceholder("Your Name").fill("Admin");
+    await page.getByPlaceholder("id@example.com").fill("admin@example.com");
+    await page.getByRole("textbox", { name: "Password" }).fill("password123");
+    await page.locator("button[type=submit]").click();
+    await Promise.race([
+      page.waitForURL(/dashboard/, { timeout: 60_000 }),
+      page.getByText("already exists").waitFor({ timeout: 60_000 }),
+    ]);
+    await page.close();
+  });
+
   test("switch persists, skip and thin-description note reply", async ({
     page,
     baseURL,
