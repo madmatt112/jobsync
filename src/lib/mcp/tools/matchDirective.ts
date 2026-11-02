@@ -8,6 +8,7 @@ import {
   buildJobMatchPrompt,
 } from "@/lib/ai/prompts/job-match";
 import type { DescriptionCompleteness } from "@/models/job.model";
+import type { MatchReply } from "@/lib/mcp/serverMatch/offer";
 
 type MatchContext = "add" | "update" | "rescore";
 
@@ -143,7 +144,7 @@ export async function buildMatchOffer(
 // Shared by add_job and update_job so both compose the offer identically.
 export function composeOfferMessage(
   message: string,
-  offer: { kind: "directive" | "note"; text: string },
+  offer: MatchReply,
 ): string {
   return offer.kind === "directive"
     ? `${message}\n\n${offer.text}`
