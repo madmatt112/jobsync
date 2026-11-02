@@ -122,7 +122,7 @@ describe("runServerMatch", () => {
     resolveModel.mockResolvedValue(
       modelReturning({
         content: [{ type: "text", text: MATCH_TEXT }],
-        finishReason: "stop",
+        finishReason: { unified: "stop", raw: "stop" },
         usage,
       }),
     );
@@ -138,7 +138,7 @@ describe("runServerMatch", () => {
   it("sends the shared prompt, FEEDBACK temperature and both provider options", async () => {
     const model = modelReturning({
       content: [{ type: "text", text: MATCH_TEXT }],
-      finishReason: "stop",
+      finishReason: { unified: "stop", raw: "stop" },
       usage,
     });
     resolveModel.mockResolvedValue(model);
@@ -246,7 +246,7 @@ describe("runServerMatch", () => {
         resolveModel.mockResolvedValue(
           modelReturning({
             content: [{ type: "text", text: MATCH_TEXT }],
-            finishReason: "length",
+            finishReason: { unified: "length", raw: "length" },
             usage,
           }),
         ),
@@ -258,7 +258,7 @@ describe("runServerMatch", () => {
         resolveModel.mockResolvedValue(
           modelReturning({
             content: [{ type: "text", text: "no scores here" }],
-            finishReason: "stop",
+            finishReason: { unified: "stop", raw: "stop" },
             usage,
           }),
         ),
