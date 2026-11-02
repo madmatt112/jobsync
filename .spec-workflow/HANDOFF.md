@@ -123,4 +123,11 @@
 
 | Field | Value |
 | --- | --- |
-| State | tasks 14/14, last commit a553b75, next completion gate |
+| State | tasks 14/14, implemented 2026-11-02 |
+| Implemented | 2026-11-02 |
+| PR | pending |
+| Coverage | logCoverage 14/14; reviewCoverage 14/14; TDD: N/A (no tdd-test-command wired) |
+| Deferrals | 2 added by this spec, 2 open in all |
+| Verifier-skipped | none |
+| Next | d-6da4d629 mcp-server-match e2e enables switch outside try/finally reset; d-ae72e9d2 get_job failure line: untested branch for scored job with no matchData.matchedAt |
+| Gotchas | none |

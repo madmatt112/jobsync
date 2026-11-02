@@ -282,3 +282,8 @@
 {"ts":"2026-11-02T05:13:37.569Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-verifier","input":"50","output":"17648","cacheWrite":"69593","cacheRead":"1453946","tokens":"1541237","cacheWrite5m":"0","cacheWrite1h":"69593","model":"claude-opus-4-8"}
 {"ts":"2026-11-02T05:13:37.569Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-verifier","role":"verify task 14 round 1","result":"VERDICT: pass","phase":"implementation","task":"14","round":"1"}
 {"ts":"2026-11-02T05:13:37.569Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"14","rounds":"1","outcome":"pass"}
+{"ts":"2026-11-02T05:13:37.665Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.start","agent":"sdd-verifier","role":"end-to-end verification","model":"claude-opus-4-8","effort":"xhigh"}
+{"ts":"2026-11-02T05:33:19.594Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-verifier","input":"12","output":"7220","cacheWrite":"9564","cacheRead":"701542","tokens":"718338","cacheWrite5m":"0","cacheWrite1h":"9564","model":"claude-opus-4-8"}
+{"ts":"2026-11-02T05:33:19.595Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-verifier","role":"end-to-end verification","result":"VERIFY: pass","phase":"implementation"}
+{"ts":"2026-11-02T05:33:19.595Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"e2e verification passed"}
+{"ts":"2026-11-02T05:33:19.715Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"completion handoff written"}

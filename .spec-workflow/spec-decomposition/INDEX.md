@@ -15,3 +15,4 @@
 | --- | --- | --- | --- |
 | 1 | mcp-read-tools | Complete | 22/22 |
 | 2 | mcp-write-tools | Complete | 12/12 |
+| 3 | server-side-match | Complete | 14/14 |
