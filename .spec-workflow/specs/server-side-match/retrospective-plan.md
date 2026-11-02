@@ -121,3 +121,6 @@ One line per proposal, written by the close-out phase.
 - P2: skipped — no change needed; already committed in 17c7013 — .spec-workflow/steering/shared-const-imports.md fully matches the item (decomposition names exact module path, adds to file list, forbids barrel; implementation imports directly, matches matchJob.ts, forbids barrel re-export)
 - P4: to-do (human) — Targets harness TDD-gate/decomposition skill plus eval harness/evals/tdd-red-impossible-skip/; neither is under jobsync/.spec-workflow (no agent-rules.md, no harness tree). Needs another repo/file.
 - P5: to-do (human) — Targets harness decomposition/verifier skill plus eval harness/evals/writer-task-needs-reader/; not reachable under jobsync/.spec-workflow.
+- P1: to-do (human) — Branch predates the server-side-match feature; no Node-reachable admin seed path here, premise (in-spec/signup seed it would replace) and the required harness/evals/ dir match main's state not this branch. Forcing it would be a wrong build.
+- P8: to-do (human) — e2e/mcp-server-match.spec.ts does not exist on this branch (branch cut from pre-feature main e2ac014; file only exists on main).
+- P9: to-do (human) — getJob.ts on this branch has no serverMatchFailedAt failure-line branch (server-side-match feature absent; present only on main).

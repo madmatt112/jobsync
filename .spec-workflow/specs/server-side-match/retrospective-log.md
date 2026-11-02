@@ -124,3 +124,13 @@ Cost: unknown
 store batch 1: 0 done of 3, 1 fix round(s)
 Evidence: batch 1 · mark run-20261030-200305 4e56e5ee
 Cost: 2 implementer spawn(s)
+
+## 2026-11-02T16:54:21Z · closeout · code batch 2 · gotcha
+process — The chore/server-side-match-retro worktree was cut from pre-feature main (merge-base e2ac014); the entire server-side-match feature lives on current main (35c2492) and is absent here, blocking all three items. AFFECTS-FUTURE-SPECS: recreate/rebase the retro worktree from current main before re-running this batch. Also reconcile the standing doc's harness/evals/<id>/ + 'npm test checks it' with this repo (top-level evals/ promptfoo; npm test = vitest run). Full detail: /tmp/scratchpad/sdd/server-side-match/closeout-code-2-blocked.md"
+Evidence: batch 2 · mark run-20261030-200305 cd1f71ea
+Cost: implementer
+
+## 2026-11-02T16:54:21Z · closeout · code batch 2 · cleanup
+code batch 2: 0 done of 3, 0 fix round(s)
+Evidence: batch 2 · mark run-20261030-200305 b34ce455
+Cost: 1 implementer spawn(s)

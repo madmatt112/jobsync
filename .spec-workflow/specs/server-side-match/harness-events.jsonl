@@ -320,3 +320,12 @@
 {"ts":"2026-11-02T16:47:22.091Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P2","outcome":"skipped"}
 {"ts":"2026-11-02T16:47:22.092Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P4","outcome":"to-do"}
 {"ts":"2026-11-02T16:47:22.092Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P5","outcome":"to-do"}
+{"ts":"2026-11-02T16:48:01.807Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.pick","task":"P1","title":"P1 (F1) — Seed the admin user in e2e globalSetup, not per-spec."}
+{"ts":"2026-11-02T16:48:01.807Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.pick","task":"P8","title":"P8 (F8) — Reset the server-match switch in a finally, not before the try."}
+{"ts":"2026-11-02T16:48:01.807Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.pick","task":"P9","title":"P9 (F9) — Add a test for the scored-job-without-matchedAt failure line."}
+{"ts":"2026-11-02T16:48:01.817Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.start","agent":"sdd-implementer","role":"implement code batch 2","model":"claude-opus-4-8","effort":"xhigh"}
+{"ts":"2026-11-02T16:54:21.488Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-implementer","input":"62","output":"27161","cacheWrite":"60844","cacheRead":"1484967","tokens":"1573034","cacheWrite5m":"0","cacheWrite1h":"60844","model":"claude-opus-4-8"}
+{"ts":"2026-11-02T16:54:21.488Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-implementer","role":"implement code batch 2","result":"ok","phase":"closeout"}
+{"ts":"2026-11-02T16:54:21.507Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P1","outcome":"to-do"}
+{"ts":"2026-11-02T16:54:21.508Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P8","outcome":"to-do"}
+{"ts":"2026-11-02T16:54:21.508Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P9","outcome":"to-do"}
