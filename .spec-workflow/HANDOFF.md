@@ -22,6 +22,7 @@
 | 2026-10-08 | mcp-write-tools | closeout | items 14/14 | closed | 10 done, 3 skipped, 1 to-do; PRs jobsync#4 swm#87 |
 | 2026-10-31 | server-side-match | requirements | v3 | approved | 3 rounds |
 | 2026-10-31 | server-side-match | design | v2 | approved | 2 rounds |
+| 2026-11-01 | server-side-match | tasks | v1 | approved | 3 rounds |
 
 ## mcp-write-tools — requirements
 
@@ -99,6 +100,19 @@
 | State | approved at v2 on 2026-10-31 |
 | Rounds | 2; verdicts converged |
 | Approval | `approval_1793468413853_eq3eumshx` |
+| Rulings | none |
+| Cut scope | none |
+| Carried items | none |
+| Next phase loads | codebase-context.md |
+
+
+## server-side-match — tasks
+
+| Field | Value |
+| --- | --- |
+| State | approved at v2 on 2026-11-02 |
+| Rounds | 3; verdicts gate-b annotation |
+| Approval | `approval_1793586597673_uh7a78ud2` |
 | Rulings | none |
 | Cut scope | none |
 | Carried items | none |
