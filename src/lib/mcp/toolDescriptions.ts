@@ -4,7 +4,7 @@
 // server registers instead of a copy that silently drifts.
 export const MCP_TOOL_DESCRIPTIONS = {
   add_job:
-    "Add a job application to JobSync. Resolves or creates company, job title, location, and source by name. Returns a transparency report of what was matched vs. created.",
+    "Add a job application to JobSync. Resolves or creates company, job title, location, and source by name. Returns a transparency report of what was matched vs. created. The reply carries a match directive, or states that the match is queued when server-side matching is on. Pass skipMatch: true to skip scoring a job.",
   find_job:
     "Check whether one posting is already saved, by its exact URL. Call this before add_job when re-running a search. It answers 'is this URL saved?', not 'is anything like this saved?' — for that, or with no URL, use search_jobs. To add without a URL check, use add_job's upsert.",
   get_job:
@@ -14,13 +14,13 @@ export const MCP_TOOL_DESCRIPTIONS = {
   search_jobs:
     "Find saved jobs by words in their title, company, description or notes — a role you remember by name, or a repost saved under a different URL. Same filters, sort and paging as list_jobs; same one-line rows. Read-only. With the exact posting URL, use find_job instead.",
   update_job:
-    "Correct or enrich any job the user owns. Only the fields you supply change. Supplying a fuller jobDescription re-classifies the posting and requests a fresh match analysis — use this instead of re-adding with allowDuplicate.",
+    "Correct or enrich any job the user owns. Only the fields you supply change. Supplying a fuller jobDescription re-classifies the posting and requests a fresh match analysis: the reply carries a match directive, or states that the match is queued when server-side matching is on — use this instead of re-adding with allowDuplicate.",
   add_question:
     "Add an entry to the Question Bank. Resolves or creates tags by name. Returns a transparency report of what was matched vs. created.",
   save_match_result:
     "Persist a job-fit match analysis (produced by you, the agent) against any job the user owns. Call this after add_job, update_job or get_job hands you a match directive.",
   add_jobs_batch:
-    "Add several jobs in one call. Same per-item behaviour as add_job (including upsert and the match directive); returns one labelled result per item. Use this for scheduled runs instead of N sequential add_job calls.",
+    "Add several jobs in one call. Same per-item behaviour as add_job (including upsert and the match directive); returns one labelled result per item. Use this for scheduled runs instead of N sequential add_job calls. The reply carries a match directive, or states that the match is queued when server-side matching is on. Pass skipMatch: true to skip scoring a job.",
   save_match_results_batch:
     "Persist several job-fit match analyses in one call. Same per-item behaviour as save_match_result; returns one labelled result per item.",
   save_cover_letter:

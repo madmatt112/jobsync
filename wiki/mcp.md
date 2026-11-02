@@ -93,6 +93,8 @@ For a match, add a job through the agent with the full posting text. JobSync pic
 
 How complete the description is decides what happens. A posting of roughly 150 words or more gets a full match. A shorter one still gets matched, but the score is flagged **Provisional** on the job. A title-only entry gets no match offer at all — the agent is told to fetch the full posting and update the job first.
 
+**Settings → AI Provider** has a switch, **Score MCP jobs on the server**, off by default. Turn it on and JobSync scores added and updated jobs itself, in the background, using your configured model — the agent no longer has to do the match analysis and the save_match_result call. Read the result the normal way, with **get_job**; if the background match failed, that same read shows the reason. An agent can skip scoring a single job by passing `skipMatch: true` to add_job or add_jobs_batch, whether or not the switch is on.
+
 For a resume review, ask your agent to review your resume. It reviews your **default** resume only, and needs one with enough content to work from; the result appears on that resume in the app.
 
 Both are two-step flows, so a match or review is saved only if your agent completes the second call. If it stops after the first, the job or resume simply has no result attached — nothing is half-written.
