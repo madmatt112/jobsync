@@ -95,4 +95,29 @@ describe("AiSettings model select", () => {
     release({ ok: true, json: async () => ({ data: [{ id: "deepseek-chat" }] }) });
     await waitFor(() => expect(modelTrigger().textContent).toBe("Select Model"));
   });
+
+  // Contract: Req 2.2 — when the DeepSeek models fetch fails, the fallback
+  // list offered in the model select is exactly ["deepseek-flash"], with
+  // neither retired alias present.
+  // Pre-condition: AiSettings rendered, provider switched to DeepSeek.
+  // Test: fetch resolves ok: false, then open the model select.
+  // Observable result: the rendered option list equals ["deepseek-flash"].
+  // Source: requirements.md Req 2.2; design.md C2.
+  it("falls back to deepseek-flash only when the DeepSeek models fetch fails", async () => {
+    render(<AiSettings />);
+    await waitFor(() => expect(modelTrigger().textContent).toBe("llama3.1"));
+
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: false,
+        json: async () => ({ error: "boom" }),
+      }),
+    ) as unknown as typeof fetch;
+    await pick(providerTrigger(), "DeepSeek");
+
+    await waitFor(() => expect(modelTrigger()).not.toBeDisabled());
+    fireEvent.keyDown(modelTrigger(), { key: "Enter" });
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["deepseek-flash"]);
+  });
 });
