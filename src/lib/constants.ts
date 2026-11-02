@@ -108,6 +108,9 @@ export const APP_CONSTANTS = {
   // Ollama runs sequentially since it serializes on the GPU).
   AUTOMATION_MATCH_CONCURRENCY: 3,
 
+  // Concurrent AI job-match calls for server-side matching.
+  SERVER_MATCH_CONCURRENCY: 3,
+
   // Shared ATS tuning (applies to every job board provider)
   ATS_MAX_COMPANIES: 25, // per automation
   ATS_LISTING_CAP: 50, // safety ceiling applied after the relevance floor
@@ -167,6 +170,7 @@ export const APP_CONSTANTS = {
   // Provenance on Resume.reviewData, alongside the MCP path's "mcp" marker.
   AGENT_CHAT_REVIEW_SURFACE: "chat",
   AGENT_CHAT_MATCH_SURFACE: "chat",
+  SERVER_MATCH_SURFACE: "server",
   AGENT_CHAT_MAX_STEPS: 4,
   AGENT_CHAT_MAX_STORED_MESSAGES: 50,
   AGENT_CHAT_HISTORY_MESSAGES: 20,
