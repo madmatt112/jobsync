@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/serverMatchOffer.spec.ts"],"seams":{"__tests__/serverMatchOffer.spec.ts":"resolveMatchReply(jobId, userId, completeness, context, skipMatch)"},"redCommit":"546ba40356e05579e09ed333c7807355dcc90a38","baseSha":"d6acd82dcc18a83bfdb10c1a19d7c63eceb208d4","base":"inconclusive","head":"not-run","amended":false,"judged":null}
