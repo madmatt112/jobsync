@@ -52,3 +52,5 @@ export {
 } from "./tools/text-processing";
 
 export { checkRateLimit } from "./rate-limiter";
+
+export { MATCH_PROVIDER_OPTIONS } from "./matchProviderOptions";

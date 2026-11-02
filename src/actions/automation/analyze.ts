@@ -10,6 +10,7 @@ import {
   buildJobMatchPrompt,
   preprocessResume,
   preprocessJob,
+  MATCH_PROVIDER_OPTIONS,
 } from "@/lib/ai";
 import { getResumeById } from "@/actions/profile.actions";
 import { getJobDetails } from "@/actions/job.actions";
@@ -114,6 +115,7 @@ export async function analyzeDiscoveredJob(jobId: string): Promise<{
           system: JOB_MATCH_SYSTEM_PROMPT,
           prompt: promptText,
           temperature: 0.3,
+          providerOptions: MATCH_PROVIDER_OPTIONS,
         });
         span.setAttrs(
           genAiResponseAttrs({

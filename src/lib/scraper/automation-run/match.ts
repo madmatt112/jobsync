@@ -5,6 +5,7 @@ import {
   AUTOMATION_JOB_MATCH_SYSTEM_PROMPT,
   buildAutomationJobMatchPrompt,
   removeHtmlTags,
+  MATCH_PROVIDER_OPTIONS,
 } from "@/lib/ai";
 import { APP_CONSTANTS } from "@/lib/constants";
 import type { JobBoard } from "@/models/automation.model";
@@ -81,6 +82,7 @@ ${removeHtmlTags(job.description)}
           prompt: promptText,
           temperature: 0.3,
           abortSignal: signal,
+          providerOptions: MATCH_PROVIDER_OPTIONS,
         });
         span.setAttrs(
           genAiResponseAttrs({
