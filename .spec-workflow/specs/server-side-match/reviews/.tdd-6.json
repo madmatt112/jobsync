@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/mcpGetJob.spec.ts"],"seams":{"__tests__/mcpGetJob.spec.ts":"handleGetJob(input, userId)"},"redCommit":"06146765de8d182f08e55551bcba5486c6a12fe5","baseSha":"eaa71a7ae4048b20b51746d1024224d2c70fb250","base":"inconclusive","head":"not-run","amended":false,"judged":null}
