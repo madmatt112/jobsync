@@ -35,8 +35,7 @@ export enum OpenaiModel {
 }
 
 export enum DeepseekModel {
-  DEEPSEEK_CHAT = "deepseek-chat",
-  DEEPSEEK_REASONER = "deepseek-reasoner",
+  DEEPSEEK_FLASH = "deepseek-flash",
 }
 
 export enum GeminiModel {

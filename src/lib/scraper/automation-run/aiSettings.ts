@@ -30,7 +30,7 @@ export function getDefaultModelForProvider(provider: AiProvider): string {
     case AiProvider.OPENAI:
       return OpenaiModel.GPT4O_MINI;
     case AiProvider.DEEPSEEK:
-      return DeepseekModel.DEEPSEEK_CHAT;
+      return DeepseekModel.DEEPSEEK_FLASH;
     case AiProvider.GEMINI:
       return GeminiModel.GEMINI_2_0_FLASH;
     case AiProvider.OPENROUTER:
