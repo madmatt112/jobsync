@@ -157,6 +157,15 @@ describe("match_job agent tool", () => {
     expect(streamText.mock.calls[0][0].providerOptions.ollama.think).toBeUndefined();
   });
 
+  // Req 1.1 and 1.5: the in-app Match sends DeepSeek thinking disabled, and
+  // only under the deepseek key, leaving the ollama key as the only other one.
+  it("sends DeepSeek thinking disabled beside the unchanged ollama key", async () => {
+    await execute(buildMatchJobTool(ctx()), {});
+    const providerOptions = streamText.mock.calls[0][0].providerOptions;
+    expect(providerOptions.deepseek.thinking.type).toBe("disabled");
+    expect(Object.keys(providerOptions)).toEqual(["ollama", "deepseek"]);
+  });
+
   it("streams the sub-call's tokens as transient parts keyed by the tool call", async () => {
     streamText.mockReturnValue(
       textStreamOf(["SCORES: ", "match=72 recommendation=good\n\nBody"]),

@@ -57,6 +57,28 @@ describe("runNestedGeneration", () => {
     expect(streamText.mock.calls[0][0].providerOptions.ollama.think).toBeUndefined();
   });
 
+  it("merges extraProviderOptions beside the ollama key", async () => {
+    await runNestedGeneration({
+      ...args(),
+      extraProviderOptions: { deepseek: { thinking: { type: "disabled" } } },
+    } as any);
+    const providerOptions = streamText.mock.calls[0][0].providerOptions;
+    expect(providerOptions).toEqual({
+      ollama: { options: { num_ctx: APP_CONSTANTS.AI_OLLAMA_NUM_CTX } },
+      deepseek: { thinking: { type: "disabled" } },
+    });
+  });
+
+  // Req 1.7 invariant: review_resume and generate_cover_letter never pass
+  // extraProviderOptions, so their call stays exactly the base object.
+  it("sends exactly the base ollama object when extraProviderOptions is absent", async () => {
+    await runNestedGeneration(args());
+    const providerOptions = streamText.mock.calls[0][0].providerOptions;
+    expect(providerOptions).toEqual({
+      ollama: { options: { num_ctx: APP_CONSTANTS.AI_OLLAMA_NUM_CTX } },
+    });
+  });
+
   it("returns the concatenated text on a clean finish", async () => {
     const result = await runNestedGeneration(args());
     expect(result).toEqual({ status: "ok", text: "hello world" });
