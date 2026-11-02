@@ -94,6 +94,7 @@ function renderDetail(job: JobDetail): string {
   // body is read from the original row only when the score is showable.
   const visible = hideUnanalyzedScore(job);
   lines.push("", "## Match");
+  let matchedAt: Date | null = null;
   if (visible.matchScore == null) {
     lines.push("Not scored.");
   } else {
@@ -101,13 +102,23 @@ function renderDetail(job: JobDetail): string {
     try {
       data = JSON.parse(job.matchData ?? "{}");
     } catch {}
+    matchedAt = data.matchedAt ? new Date(String(data.matchedAt)) : null;
     const meta = [
       data.recommendation ? `recommendation: ${data.recommendation}` : null,
-      data.matchedAt ? `matched ${day(new Date(String(data.matchedAt)))}` : null,
+      data.matchedAt ? `matched ${day(matchedAt)}` : null,
       data.provider ? `via ${[data.provider, data.model].filter(Boolean).join("/")}` : null,
     ].filter(Boolean);
     lines.push(`Score: ${visible.matchScore}%${meta.length ? ` — ${meta.join(", ")}` : ""}`);
     if (typeof data.body === "string" && data.body.trim()) lines.push(data.body.trim());
+  }
+
+  if (
+    job.serverMatchFailedAt &&
+    (visible.matchScore == null ||
+      !matchedAt ||
+      matchedAt.getTime() < new Date(job.serverMatchFailedAt).getTime())
+  ) {
+    lines.push(`Server-side match failed ${day(job.serverMatchFailedAt)}: ${job.serverMatchError}`);
   }
 
   lines.push("", "## Description", job.description);

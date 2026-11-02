@@ -475,6 +475,10 @@ model Job {
   // "title-only" | "partial" | "full". Null for pre-existing/UI jobs.
   descriptionCompleteness String?
 
+  // Server-side match (automatic re-match) failure, kept until a later match supersedes it.
+  serverMatchError    String?
+  serverMatchFailedAt DateTime?
+
   @@index([userId, automationId])
   @@index([userId, discoveryStatus])
   // Also has a hand-written partial unique index (not expressible here):
