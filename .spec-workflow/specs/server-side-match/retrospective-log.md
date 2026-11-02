@@ -109,3 +109,18 @@ Cost: see the ledger
 retrospective compiled: 13 findings, 9 proposals, 0 decisions needed
 Evidence: retrospective.md, retrospective-proposals.md · mark run-20261030-200305 e6e293a4
 Cost: 2 spawns
+
+## 2026-11-02T16:46:28Z · closeout · store batch 1 · gotcha
+process — P4/P5 are harness-only (skill + eval case) and were routed to the spec-store batch, which cannot reach harness/evals or harness skills, leaving them undoable here.
+Evidence: batch 1 · mark run-20261030-200305 5d5af849
+Cost: implementer
+
+## 2026-11-02T16:47:22Z · closeout · store batch 1 · deviation
+P2 skipped: no change needed; already committed in 17c7013 — .spec-workflow/steering/shared-const-imports.md fully matches the item (decomposition names exact module path, adds to file list, forbids barrel; implementation imports directly, matches matchJob.ts, forbids barrel re-export)
+Evidence: P2 · mark run-20261030-200305 3b6e2ba2
+Cost: unknown
+
+## 2026-11-02T16:47:22Z · closeout · store batch 1 · cleanup
+store batch 1: 0 done of 3, 1 fix round(s)
+Evidence: batch 1 · mark run-20261030-200305 4e56e5ee
+Cost: 2 implementer spawn(s)
