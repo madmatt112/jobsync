@@ -70,6 +70,12 @@ export const McpAddJobInputShape = {
     .describe(
       "If this posting is already saved, update it with the fields supplied here instead of reporting a duplicate. A posting counts as already saved when it matches on URL, or on company+title within the dedupe window — so this works for postings with no URL at all. Set this on every re-run of a saved or scheduled search, whether or not you have a URL.",
     ),
+  skipMatch: z
+    .boolean()
+    .optional()
+    .describe(
+      "Set true to ask JobSync not to score this job: no match directive, no server-side match.",
+    ),
 };
 
 // Full schema with transforms for parsing raw MCP input in the handler

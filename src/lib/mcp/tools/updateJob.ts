@@ -2,7 +2,8 @@ import { z } from "zod";
 import { McpUpdateJobSchema } from "@/models/mcp.schema";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
-import { buildMatchOffer, composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import { composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import { resolveMatchReply } from "@/lib/mcp/serverMatch/offer";
 
 export async function handleUpdateJob(
   input: z.infer<typeof McpUpdateJobSchema>,
@@ -26,7 +27,7 @@ export async function handleUpdateJob(
       return { content: [{ type: "text", text: result.message }] };
     }
 
-    const offer = await buildMatchOffer(
+    const offer = await resolveMatchReply(
       result.jobId,
       userId,
       result.descriptionCompleteness ?? "title-only",

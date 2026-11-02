@@ -3,7 +3,8 @@ import { McpAddJobSchema } from "@/models/mcp.schema";
 import { createJobFromNames } from "@/lib/jobs/createJobFromNames";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
-import { buildMatchOffer, composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import { composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import { resolveMatchReply } from "@/lib/mcp/serverMatch/offer";
 
 export async function handleAddJob(
   input: z.infer<typeof McpAddJobSchema>,
@@ -35,11 +36,12 @@ export async function handleAddJob(
       return { content: [{ type: "text", text }] };
     }
 
-    const offer = await buildMatchOffer(
+    const offer = await resolveMatchReply(
       result.jobId,
       userId,
       result.descriptionCompleteness ?? "title-only",
       "add",
+      input.skipMatch,
     );
     return {
       content: [{ type: "text", text: composeOfferMessage(result.message, offer) }],
@@ -59,18 +61,19 @@ async function upsertExisting(
   input: z.infer<typeof McpAddJobSchema>,
   userId: string,
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
-  const { upsert, allowDuplicate, ...fields } = input;
+  const { upsert, allowDuplicate, skipMatch, ...fields } = input;
   const result = await updateJobFromNames({ jobId, ...fields }, userId);
 
   if (!result.updated || !result.descriptionChanged) {
     return { content: [{ type: "text", text: result.message }] };
   }
 
-  const offer = await buildMatchOffer(
+  const offer = await resolveMatchReply(
     result.jobId,
     userId,
     result.descriptionCompleteness ?? "title-only",
     "update",
+    skipMatch,
   );
   return {
     content: [{ type: "text", text: composeOfferMessage(result.message, offer) }],
