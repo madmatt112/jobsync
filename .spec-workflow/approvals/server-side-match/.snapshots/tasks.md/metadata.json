@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/server-side-match/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-11-01T14:58:16.238Z",
+      "trigger": "initial",
+      "approvalId": "approval_1793545096229_bbt8ixtqo",
+      "approvalTitle": "server-side-match tasks v1"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-11-01T14:58:16.259Z",
+      "trigger": "approved",
+      "approvalId": "approval_1793545096229_bbt8ixtqo",
+      "approvalTitle": "server-side-match tasks v1"
+    }
+  ]
+}
