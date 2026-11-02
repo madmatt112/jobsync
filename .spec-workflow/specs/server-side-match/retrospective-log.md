@@ -19,3 +19,13 @@ Cost: 2 implementer spawn(s)
 task 3 closed: 0 fix round(s), outcome pass
 Evidence: task 3 · mark run-20261030-200305 ac167472
 Cost: 1 implementer spawn(s)
+
+## 2026-11-02T02:56:24Z · implementation · task 4 · doc-gap
+red-impossible: no reader of serverSideMatch exists in this task's seam; satisfied vacuously at base since defaultUserSettings has no such key (restriction, not changed). Regression guard \"defaultUserSettings has no serverSideMatch key\" added, green at base/after, no prior assertion named it. Req 3.3 is the task's own named regression guard (updateAiSettings keeps stored flag via existing merge spread), green at base as stated in task text.","flag":"none","redImpossible":"some","retro":"none"}
+Evidence: task 4 · mark run-20261030-200305 f44a7c2a
+Cost: 1 spawn
+
+## 2026-11-02T03:01:50Z · implementation · task 4 · gotcha
+task 4 closed: 0 fix round(s), outcome pass
+Evidence: task 4 · mark run-20261030-200305 16754cf6
+Cost: 1 implementer spawn(s)

@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/userSettingsServerMatch.spec.ts"],"seams":{"__tests__/userSettingsServerMatch.spec.ts":"updateServerSideMatch(enabled)"},"redCommit":"249e810b3e69d1a5cf58a389622b3c4d0ab6fe70","baseSha":"f6ecefa67dcf5ba97ec768264bbc3dc3238c0efc","base":"inconclusive","head":"not-run","amended":true,"judged":null}
