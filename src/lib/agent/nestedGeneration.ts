@@ -12,6 +12,8 @@ import {
   SURFACES,
 } from "@/lib/telemetry";
 
+type ProviderOptions = Parameters<typeof streamText>[0]["providerOptions"];
+
 export type NestedGenerationResult =
   | { status: "ok"; text: string }
   | { status: "incomplete" }
@@ -39,6 +41,10 @@ type NestedGenerationArgs = {
   // Call-site facts the invariant half cannot know: input sizes and whether
   // the caller clipped what it sent.
   attrs?: Record<string, unknown>;
+  // Merged beside the ollama key below. match_job uses this to disable
+  // DeepSeek's thinking channel; review_resume and generate_cover_letter
+  // leave it unset.
+  extraProviderOptions?: ProviderOptions;
 };
 
 /**
@@ -62,6 +68,7 @@ export async function runNestedGeneration({
   provider,
   modelName,
   attrs,
+  extraProviderOptions,
 }: NestedGenerationArgs): Promise<NestedGenerationResult> {
   // Started before the guard check so a rejected call is visible too — "busy"
   // is exactly the outcome you go looking for when a review never appeared.
@@ -103,7 +110,10 @@ export async function runNestedGeneration({
         abortSignal: AbortSignal.any(signals),
         // Deliberately no think:true. These sub-calls have no tools, so
         // reasoning buys nothing and costs 30s. The chat loop enables it.
-        providerOptions: { ollama: { options: { num_ctx: numCtx } } },
+        providerOptions: {
+          ollama: { options: { num_ctx: numCtx } },
+          ...extraProviderOptions,
+        },
       });
 
       for await (const delta of sub.textStream) {
