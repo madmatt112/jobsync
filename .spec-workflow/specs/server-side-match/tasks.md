@@ -4,7 +4,7 @@ Document version: v2
 
 Dependency order: tasks run in number order on one branch from `main`. Tasks 1-3 (thinking option, DeepSeek model) stand alone. Task 4 adds the setting and its server action; task 5 builds the switch on that action. Task 6 adds the failure columns that task 9 writes. Tasks 7 (shared write) and 8 (constants, budget) feed task 9 (the run). Task 10 (queue) drives task 9; task 11 (reply decision) enqueues through task 10; task 12 wires the MCP handlers and the skip flag to task 11; task 13 updates the tool text, the wiki and the generated tool list after task 12's schema change; task 14 (end-to-end) runs last. No task uses an artefact a later task creates, so no bridge is needed. Every task leaves the tree compiling with `npx tsc --noEmit`, `npm run lint` and `npm run test` green.
 
-- [ ] 1. Match provider options on the in-app Match
+- [x] 1. Match provider options on the in-app Match
   - File: src/lib/ai/matchProviderOptions.ts
   - File: src/lib/agent/nestedGeneration.ts
   - File: src/lib/agent/tools/matchJob.ts

@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/agentMatchJobTool.spec.ts","__tests__/agentNestedGeneration.spec.ts"],"seams":{"__tests__/agentMatchJobTool.spec.ts":"buildMatchJobTool(ctx).execute(input, options)"},"redCommit":"447f9c636c99ae8ce90b30c8bca081d66627c36e","baseSha":"e998e5bba4ade758ef22f37c3a09f3430a62e365","base":"inconclusive","head":"not-run","amended":false,"judged":null}
