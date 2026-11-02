@@ -308,4 +308,90 @@ describe("handleGetJob", () => {
       expect(buildMatchOffer).toHaveBeenCalledTimes(0);
     });
   });
+
+  describe("server-match failure line (R7 AC4, AC5)", () => {
+    it("shows the failure line on an unscored job", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(
+        minimalJob({
+          serverMatchError: "provider timeout",
+          serverMatchFailedAt: new Date("2026-10-30T12:00:00Z"),
+        }),
+      );
+
+      const text = (await handleGetJob({ jobId: "job-1" }, "user-1")).content[0].text;
+
+      expect(text).toContain(
+        "## Match\nNot scored.\nServer-side match failed 2026-10-30: provider timeout",
+      );
+    });
+
+    it("shows the failure line beside an older score, keeping the score line", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(
+        minimalJob({
+          matchScore: 62,
+          matchData: JSON.stringify({
+            matchScore: 62,
+            recommendation: "maybe",
+            provider: "deepseek",
+            model: "deepseek-flash",
+            matchedAt: "2026-10-29T00:00:00Z",
+            analyzed: true,
+          }),
+          serverMatchError: "no scores line",
+          serverMatchFailedAt: new Date("2026-10-30T12:00:00Z"),
+        }),
+      );
+
+      const text = (await handleGetJob({ jobId: "job-1" }, "user-1")).content[0].text;
+
+      expect(text).toContain("Score: 62%");
+      expect(text).toContain("Server-side match failed 2026-10-30: no scores line");
+    });
+
+    it("hides the failure line once a later match supersedes it", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(
+        minimalJob({
+          matchScore: 81,
+          matchData: JSON.stringify({
+            matchScore: 81,
+            recommendation: "good",
+            provider: "deepseek",
+            model: "deepseek-flash",
+            matchedAt: "2026-10-31T00:00:00Z",
+            analyzed: true,
+          }),
+          serverMatchError: "no scores line",
+          serverMatchFailedAt: new Date("2026-10-30T12:00:00Z"),
+        }),
+      );
+
+      const text = (await handleGetJob({ jobId: "job-1" }, "user-1")).content[0].text;
+
+      expect(text).toContain("Score: 81%");
+      expect(text).not.toContain("Server-side match failed");
+    });
+
+    // Regression guard (Req 5.8): the generic "via <provider>/<model>" line
+    // already renders any provider, so this passes at base — named here so
+    // the implementer keeps it green rather than as a counted red test.
+    it("renders a saved server match via deepseek/deepseek-flash", async () => {
+      (prisma.job.findFirst as any).mockResolvedValue(
+        minimalJob({
+          matchScore: 90,
+          matchData: JSON.stringify({
+            matchScore: 90,
+            recommendation: "great",
+            provider: "deepseek",
+            model: "deepseek-flash",
+            matchedAt: "2026-10-20T00:00:00Z",
+            analyzed: true,
+          }),
+        }),
+      );
+
+      const text = (await handleGetJob({ jobId: "job-1" }, "user-1")).content[0].text;
+
+      expect(text).toContain("via deepseek/deepseek-flash");
+    });
+  });
 });
