@@ -59,3 +59,13 @@ Cost: implementer
 task 9 closed: 0 fix round(s), outcome pass
 Evidence: task 9 · mark run-20261030-200305 b8756d81
 Cost: 1 implementer spawn(s)
+
+## 2026-11-02T04:09:46Z · implementation · task 10 · tool-error
+rtk's eslint wrapper returned "JSON parse failed: EOF" (phantom failure); confirmed clean via the direct ./node_modules/.bin/eslint binary per RTK.md's documented gotcha
+Evidence: task 10 · mark run-20261030-200305 2dbacbdb
+Cost: implementer
+
+## 2026-11-02T04:14:59Z · implementation · task 10 · gotcha
+task 10 closed: 0 fix round(s), outcome pass
+Evidence: task 10 · mark run-20261030-200305 68ff84e3
+Cost: 1 implementer spawn(s)
