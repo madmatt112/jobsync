@@ -108,7 +108,7 @@ describe("enqueueServerMatch", () => {
   });
 
   it("returns synchronously, before runServerMatch is ever called", () => {
-    let resolveRun!: (value: string) => void;
+    let resolveRun: ((value: string) => void) | undefined;
     run.mockImplementation(
       () => new Promise<string>((resolve) => { resolveRun = resolve; }),
     );
@@ -121,7 +121,7 @@ describe("enqueueServerMatch", () => {
     });
 
     expect(run).not.toHaveBeenCalled();
-    resolveRun("saved");
+    resolveRun?.("saved");
   });
 
   it("keeps hosted matches in flight at or below SERVER_MATCH_CONCURRENCY", async () => {
@@ -144,7 +144,14 @@ describe("enqueueServerMatch", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(run).toHaveBeenCalledTimes(APP_CONSTANTS.SERVER_MATCH_CONCURRENCY + 1);
 
-    while (pending.length) pending.shift()!.resolve("saved");
+    // Draining the backlog is itself what frees the last slot, so the final
+    // backlog entry's pending resolver only appears after this loop's own
+    // resolve calls cascade through a later microtask tick — interleave
+    // drain and advance rounds until nothing new shows up.
+    while (pending.length || run.mock.calls.length < 5) {
+      while (pending.length) pending.shift()!.resolve("saved");
+      await vi.advanceTimersByTimeAsync(0);
+    }
     await whenServerMatchIdle();
   });
 
@@ -168,7 +175,13 @@ describe("enqueueServerMatch", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(run).toHaveBeenCalledTimes(2);
 
-    while (pending.length) pending.shift()!.resolve("saved");
+    // See the comment on the equivalent drain above (hosted-concurrency
+    // test): the last backlog entry's resolver only appears once this
+    // loop's own resolutions cascade, so drain-and-advance repeatedly.
+    while (pending.length || run.mock.calls.length < 3) {
+      while (pending.length) pending.shift()!.resolve("saved");
+      await vi.advanceTimersByTimeAsync(0);
+    }
     await whenServerMatchIdle();
   });
 
