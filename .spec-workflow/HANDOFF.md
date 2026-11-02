@@ -24,6 +24,7 @@
 | 2026-10-31 | server-side-match | design | v2 | approved | 2 rounds |
 | 2026-11-01 | server-side-match | tasks | v1 | approved | 3 rounds |
 | 2026-11-02 | server-side-match | implementation | tasks 14/14 | complete | no PR |
+| 2026-11-02 | server-side-match | retrospective |  | retro-ready | 13 findings, 9 proposals |
 
 ## mcp-write-tools — requirements
 

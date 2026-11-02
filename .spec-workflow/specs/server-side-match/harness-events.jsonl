@@ -289,3 +289,13 @@
 {"ts":"2026-11-02T05:33:19.715Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"completion handoff written"}
 {"ts":"2026-11-02T05:33:19.796Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"on the default branch main: nothing pushed, no PR"}
 {"ts":"2026-11-02T05:33:19.797Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.end","phase":"implementation","result":"complete","state":"tasks 14/14","note":"no PR"}
+{"ts":"2026-11-02T05:33:19.868Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"merge: run on the default branch main; no PR, skipping the merge stage"}
+{"ts":"2026-11-02T05:33:19.878Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.start","phase":"retrospective","mode":"normal"}
+{"ts":"2026-11-02T05:33:19.887Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.start","agent":"sdd-retro-compiler","role":"compile findings","model":"claude-opus-4-8","effort":"high"}
+{"ts":"2026-11-02T05:35:19.337Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-retro-compiler","input":"24","output":"8827","cacheWrite":"58828","cacheRead":"521392","tokens":"589071","cacheWrite5m":"0","cacheWrite1h":"58828","model":"claude-opus-4-8"}
+{"ts":"2026-11-02T05:35:19.337Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-retro-compiler","role":"compile findings","result":"ok","phase":"retrospective"}
+{"ts":"2026-11-02T05:35:19.344Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.start","agent":"sdd-retro-analyst","role":"proposals","model":"claude-opus-4-8","effort":"high"}
+{"ts":"2026-11-02T05:37:00.793Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.end","agent":"sdd-retro-analyst","input":"18","output":"7157","cacheWrite":"47731","cacheRead":"304367","tokens":"359273","cacheWrite5m":"0","cacheWrite1h":"47731","model":"claude-opus-4-8"}
+{"ts":"2026-11-02T05:37:00.793Z","run":"run-20261030-200305","spec":"server-side-match","type":"spawn.usage","agent":"sdd-retro-analyst","role":"proposals","result":"ok","phase":"retrospective"}
+{"ts":"2026-11-02T05:37:00.793Z","run":"run-20261030-200305","spec":"server-side-match","type":"note","text":"retro: 9 proposals for 13 findings"}
+{"ts":"2026-11-02T05:37:00.794Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.end","phase":"retrospective","result":"retro-ready","note":"13 findings, 9 proposals"}
