@@ -6,6 +6,7 @@ import ApiKeySettings from "@/components/settings/ApiKeySettings";
 import DataSettings from "@/components/settings/DataSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import McpAccessSettings from "@/components/settings/McpAccessSettings";
+import ServerMatchSettings from "@/components/settings/ServerMatchSettings";
 import SettingsSidebar, { type SettingsSection } from "@/components/settings/SettingsSidebar";
 
 function Settings() {
@@ -22,7 +23,12 @@ function Settings() {
           onSectionChange={setActiveSection}
         />
         <div className="flex-1 min-w-0">
-          {activeSection === "ai-provider" && <AiSettings />}
+          {activeSection === "ai-provider" && (
+            <>
+              <AiSettings />
+              <ServerMatchSettings />
+            </>
+          )}
           {activeSection === "api-keys" && <ApiKeySettings />}
           {activeSection === "appearance" && <DisplaySettings />}
           {activeSection === "mcp-access" && <McpAccessSettings />}
