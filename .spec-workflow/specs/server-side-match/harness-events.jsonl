@@ -330,3 +330,4 @@
 {"ts":"2026-11-02T16:54:21.508Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P8","outcome":"to-do"}
 {"ts":"2026-11-02T16:54:21.508Z","run":"run-20261030-200305","spec":"server-side-match","type":"task.done","task":"P9","outcome":"to-do"}
 {"ts":"2026-11-02T16:54:21.602Z","run":"run-20261030-200305","spec":"server-side-match","type":"phase.end","phase":"closeout","result":"closed","state":"items 9/9","note":"0 done, 5 to-do, 4 skipped"}
+{"ts":"2026-11-02T16:54:21.680Z","run":"run-20261030-200305","spec":"server-side-match","type":"run.end","status":"done"}
