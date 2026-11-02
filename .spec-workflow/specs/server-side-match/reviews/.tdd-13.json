@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/mcpToolDescriptions.spec.ts"],"seams":{"__tests__/mcpToolDescriptions.spec.ts":"MCP_TOOL_DESCRIPTIONS"},"redCommit":"0aa4513565977c8fa79e1de7a3065d5b2f3e6634","baseSha":"896b1cab0fddfc7d91200484576a0013e70f2604","base":"inconclusive","head":"not-run","amended":false,"judged":null}
