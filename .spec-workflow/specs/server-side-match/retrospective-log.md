@@ -49,3 +49,13 @@ Cost: 1 implementer spawn(s)
 task 8 closed: 0 fix round(s), outcome pass
 Evidence: task 8 · mark run-20261030-200305 fc6ce4d4
 Cost: 1 implementer spawn(s)
+
+## 2026-11-02T03:46:38Z · implementation · task 9 · tool-error
+rtk's eslint wrapper printed "JSON parse failed" on a clean pass; confirmed clean with ./node_modules/.bin/eslint directly (exit 0, no output)
+Evidence: task 9 · mark run-20261030-200305 5b5c156b
+Cost: implementer
+
+## 2026-11-02T03:51:38Z · implementation · task 9 · gotcha
+task 9 closed: 0 fix round(s), outcome pass
+Evidence: task 9 · mark run-20261030-200305 b8756d81
+Cost: 1 implementer spawn(s)
