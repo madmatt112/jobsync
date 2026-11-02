@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/matchProviderOptions.spec.ts"],"seams":{"__tests__/matchProviderOptions.spec.ts":"matchJobToResume(job, resume, sourceBoard, aiSettings, userId) and analyzeDiscoveredJob(jobId)"},"redCommit":"fe5834748943e76ee2042f064e8ac46476bf879c","baseSha":"6a7cf569734befceaa5a478da8b713c85bec8351","base":"inconclusive","head":"not-run","amended":false,"judged":null}
