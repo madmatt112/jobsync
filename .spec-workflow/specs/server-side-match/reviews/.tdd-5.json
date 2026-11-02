@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/ServerMatchSettings.spec.tsx"],"seams":{"__tests__/ServerMatchSettings.spec.tsx":"render(ServerMatchSettings)"},"redCommit":"2bd51be226743fbbf1ec6d0f0c3d417f95be1e26","baseSha":"a590b3451b77f506681a79cfa035ed5979058940","base":"inconclusive","head":"not-run","amended":false,"judged":null}
