@@ -23,6 +23,7 @@
 | 2026-10-31 | server-side-match | requirements | v3 | approved | 3 rounds |
 | 2026-10-31 | server-side-match | design | v2 | approved | 2 rounds |
 | 2026-11-01 | server-side-match | tasks | v1 | approved | 3 rounds |
+| 2026-11-02 | server-side-match | implementation | tasks 14/14 | complete | no PR |
 
 ## mcp-write-tools — requirements
 
@@ -125,7 +126,7 @@
 | --- | --- |
 | State | tasks 14/14, implemented 2026-11-02 |
 | Implemented | 2026-11-02 |
-| PR | pending |
+| PR | none (no remote, or not opened: see Gotchas) |
 | Coverage | logCoverage 14/14; reviewCoverage 14/14; TDD: N/A (no tdd-test-command wired) |
 | Deferrals | 2 added by this spec, 2 open in all |
 | Verifier-skipped | none |
