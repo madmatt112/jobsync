@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/serverMatchBudget.spec.ts"],"seams":{"__tests__/serverMatchBudget.spec.ts":"takeServerMatchBudget(userId)"},"redCommit":"c752ea768c5917f497f4d27dc283dbe6842ac79b","baseSha":"7385c425e1d1a23fea40aec263f12c4ad526d4d0","base":"inconclusive","head":"not-run","amended":false,"judged":null}

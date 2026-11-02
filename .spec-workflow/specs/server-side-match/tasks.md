@@ -97,7 +97,7 @@ Dependency order: tasks run in number order on one branch from `main`. Tasks 1-3
   - _Requirements: 5.5_
   - _Prompt: Task: Implement the task for spec server-side-match, first run spec-workflow-guide to get the workflow guide then implement the task: per design C7, create src/lib/jobs/writeJobMatch.ts (not a "use server" module) exporting writeJobMatch(userId, jobId, matchScore, matchData) that runs prisma.job.update(`{ where: { id: jobId, userId }, data: { matchScore, matchData } }`) and lets a P2025 throw; in saveJobMatchResult replace the inline update at src/actions/job/status.ts:60-63 with writeJobMatch(user.id, jobId, matchScore, matchData). Tests: create __tests__/writeJobMatch.spec.ts mocking @prisma/client as __tests__/mcpGetJob.spec.ts:8-11 does; assert the update where is exactly `{ id, userId }` and the data exactly `{ matchScore, matchData }`; assert a rejected P2025 error propagates. __tests__/job.actions.spec.ts:1711-1763 must pass unchanged (regression guard) | Restrictions: Keep saveJobMatchResult's requireUser check, return shape and handleError mapping; do not add revalidatePath | Success: writeJobMatch updates with `{ id, userId }` and rethrows P2025; saveJobMatchResult's existing tests pass unchanged; lint and the full suite pass; mark in progress, log-implementation, mark complete_
 
-- [ ] 8. Server-match constants and the match budget
+- [x] 8. Server-match constants and the match budget
   - File: src/lib/constants.ts
   - File: src/lib/mcp/rate-limit.ts
   - File: src/lib/mcp/serverMatch/budget.ts

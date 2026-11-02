@@ -123,4 +123,4 @@
 
 | Field | Value |
 | --- | --- |
-| State | tasks 7/14, last commit 0c761cd, next task 8 |
+| State | tasks 8/14, last commit acca938, next task 9 |
