@@ -45,9 +45,10 @@ export const getUserSettings = async (): Promise<any | undefined> => {
   }
 };
 
-export const updateUserSettings = async (
-  settings: Partial<UserSettingsData>
-): Promise<any | undefined> => {
+export const updateUserSettings = async (settings: {
+  ai?: Partial<AiSettings>;
+  display?: Partial<DisplaySettings>;
+}): Promise<any | undefined> => {
   try {
     const user = await requireUser();
 
@@ -121,4 +122,10 @@ export const updateDisplaySettings = async (
   displaySettings: DisplaySettings
 ): Promise<any | undefined> => {
   return updateUserSettings({ display: displaySettings });
+};
+
+export const updateServerSideMatch = async (
+  enabled: boolean
+): Promise<any | undefined> => {
+  return updateUserSettings({ ai: { serverSideMatch: enabled } });
 };

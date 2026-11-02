@@ -3,6 +3,7 @@ import { AiProvider } from "./ai.model";
 export interface AiSettings {
   provider: AiProvider;
   model: string | undefined;
+  serverSideMatch?: boolean;
 }
 
 export interface DisplaySettings {

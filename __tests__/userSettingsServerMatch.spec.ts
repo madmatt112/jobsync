@@ -7,8 +7,10 @@
 //   task's own exact-values line.
 // - Req 3.1/3.2 (no stored row) — Pre: findUnique resolves null. Call:
 //   updateServerSideMatch(true). Observe: the upsert write's settings.ai
-//   deep-equals { provider: defaultUserSettings.ai.provider, model: undefined,
-//   serverSideMatch: true }. Expected value source: defaultUserSettings
+//   deep-equals { provider: defaultUserSettings.ai.provider, serverSideMatch:
+//   true } — JSON.stringify drops the undefined model key during the write,
+//   so "no model" is an absent key, not a present-but-undefined one.
+//   Expected value source: defaultUserSettings
 //   (src/models/userSettings.model.ts:22-30), unchanged by this task.
 // - Req 3.3 (regression guard, green at base per the task text) — Pre: a
 //   stored settings row has ai { provider: "deepseek", model: "deepseek-flash",
@@ -77,7 +79,6 @@ describe("updateServerSideMatch", () => {
 
     expect(writtenAi()).toStrictEqual({
       provider: defaultUserSettings.ai.provider,
-      model: undefined,
       serverSideMatch: true,
     });
   });
