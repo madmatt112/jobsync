@@ -10,8 +10,8 @@ import {
   buildJobMatchPrompt,
   preprocessResume,
   preprocessJob,
-  MATCH_PROVIDER_OPTIONS,
 } from "@/lib/ai";
+import { MATCH_PROVIDER_OPTIONS } from "@/lib/ai/matchProviderOptions";
 import { getResumeById } from "@/actions/profile.actions";
 import { getJobDetails } from "@/actions/job.actions";
 import { defaultUserSettings } from "@/models/userSettings.model";

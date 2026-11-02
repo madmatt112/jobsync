@@ -5,8 +5,8 @@ import {
   AUTOMATION_JOB_MATCH_SYSTEM_PROMPT,
   buildAutomationJobMatchPrompt,
   removeHtmlTags,
-  MATCH_PROVIDER_OPTIONS,
 } from "@/lib/ai";
+import { MATCH_PROVIDER_OPTIONS } from "@/lib/ai/matchProviderOptions";
 import { APP_CONSTANTS } from "@/lib/constants";
 import type { JobBoard } from "@/models/automation.model";
 import type { AiSettings } from "@/models/userSettings.model";
