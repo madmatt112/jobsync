@@ -84,3 +84,18 @@ Cost: 1 implementer spawn(s)
 task 13 closed: 0 fix round(s), outcome pass
 Evidence: task 13 · mark run-20261030-200305 b276bf67
 Cost: 1 implementer spawn(s)
+
+## 2026-11-02T04:52:53Z · implementation · task 14 · doc-gap
+red-impossible on every criterion: author report; routed implementer-only
+Evidence: task 14 · mark run-20261030-200305 0cdd741a
+Cost: 1 spawn
+
+## 2026-11-02T05:01:59Z · implementation · task 14 · doc-gap
+test:e2e's playwright.config.ts has no globalSetup, so a fresh throwaway db needs a one-time admin@example.com signup (as untracked e2e-local.setup.ts does) before any e2e suite, this one included, can log in
+Evidence: task 14 · mark run-20261030-200305 bed110ef
+Cost: implementer
+
+## 2026-11-02T05:13:37Z · implementation · task 14 · gotcha
+task 14 closed: 1 fix round(s), outcome pass
+Evidence: task 14 · mark run-20261030-200305 b6168ccc
+Cost: 2 implementer spawn(s)
