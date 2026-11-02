@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/automationAiSettings.spec.ts","__tests__/AiSettings.spec.tsx"],"seams":{"__tests__/automationAiSettings.spec.ts":"getDefaultModelForProvider(AiProvider.DEEPSEEK)"},"redCommit":"8f74499cfccdff3993dac5e8c0e695964a52313f","baseSha":"e769ad404ac87b798379f27a1b08c0750c5f4085","base":"inconclusive","head":"not-run","amended":false,"judged":null}
