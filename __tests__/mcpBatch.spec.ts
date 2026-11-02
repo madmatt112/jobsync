@@ -92,6 +92,34 @@ describe("handleAddJobsBatch", () => {
     expect(text).toContain("Rate limit exceeded");
     expect(text).toContain("1 item(s) not attempted");
   });
+
+  // Contract (design C5 "handleAddJobsBatch needs no edit" bullet, Req 4.4
+  // regression guard):
+  // Pre:   a batch item carries skipMatch: true.
+  // Test:  handleAddJobsBatch({ jobs: [item] }, userId, tokenName).
+  // Result: handleAddJob receives the item with skipMatch: true unchanged,
+  //         and the labelled line carries that item's own reply.
+  // Source: design.md C5 — addJobsBatch.ts is not edited, so each item
+  //         (skipMatch included) passes through to handleAddJob as-is.
+  it("passes an item's skipMatch through to handleAddJob unchanged and labels its own reply", async () => {
+    (handleAddJob as any).mockResolvedValueOnce({
+      content: [{ type: "text", text: "Match skipped on request" }],
+    });
+
+    const result = await handleAddJobsBatch(
+      { jobs: [{ ...job("Acme"), skipMatch: true }] } as any,
+      "user-1",
+      "my-token",
+    );
+    const text = result.content[0].text;
+
+    expect(handleAddJob).toHaveBeenCalledWith(
+      expect.objectContaining({ skipMatch: true }),
+      "user-1",
+      "my-token",
+    );
+    expect(text).toContain("[1/1] Acme — Engineer: Match skipped on request");
+  });
 });
 
 describe("handleSaveMatchResultsBatch", () => {
