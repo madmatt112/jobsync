@@ -1,6 +1,6 @@
 # Retrospective plan — server-side-match
 
-Status: APPROVED
+Status: CLOSED
 Date: 2026-11-02
 
 ## Approved proposals

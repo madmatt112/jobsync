@@ -25,6 +25,7 @@
 | 2026-11-01 | server-side-match | tasks | v1 | approved | 3 rounds |
 | 2026-11-02 | server-side-match | implementation | tasks 14/14 | complete | no PR |
 | 2026-11-02 | server-side-match | retrospective |  | retro-ready | 13 findings, 9 proposals |
+| 2026-11-02 | server-side-match | closeout | items 9/9 | closed | 0 done, 5 to-do, 4 skipped |
 
 ## mcp-write-tools — requirements
 
@@ -133,3 +134,13 @@
 | Verifier-skipped | none |
 | Next | d-6da4d629 mcp-server-match e2e enables switch outside try/finally reset; d-ae72e9d2 get_job failure line: untested branch for scored job with no matchData.matchedAt |
 | Gotchas | none |
+
+## server-side-match — closeout
+
+| Field | Value |
+| --- | --- |
+| State | items 9/9: 0 done, 5 to-do, 4 skipped |
+| PRs | none |
+| To-dos | P4: Targets harness TDD-gate/decomposition skill plus eval harness/evals/tdd-red-impossible-skip/; neither is under jobsync/.spec-workflow (no agent-rules.md, no harness tree). Needs another repo/file.; P5: Targets harness decomposition/verifier skill plus eval harness/evals/writer-task-needs-reader/; not reachable under jobsync/.spec-workflow.; P1: Branch predates the server-side-match feature; no Node-reachable admin seed path here, premise (in-spec/signup seed it would replace) and the required harness/evals/ dir match main's state not this branch. Forcing it would be a wrong build.; P8: e2e/mcp-server-match.spec.ts does not exist on this branch (branch cut from pre-feature main e2ac014; file only exists on main).; P9: getJob.ts on this branch has no serverMatchFailedAt failure-line branch (server-side-match feature absent; present only on main). |
+| Gotchas | none |
+
