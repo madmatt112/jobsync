@@ -1,0 +1,1 @@
+{"testFiles":["__tests__/writeJobMatch.spec.ts"],"seams":{"__tests__/writeJobMatch.spec.ts":"writeJobMatch(userId, jobId, matchScore, matchData)"},"redCommit":"c0184c89ef5d35951d3beb69dc507ab19bdda642","baseSha":"522852ec8bf31d8fd87cd4d3864f70aeb52e77e6","base":"inconclusive","head":"not-run","amended":false,"judged":null}
