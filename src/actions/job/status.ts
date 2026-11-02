@@ -7,6 +7,7 @@ import { requireUser } from "../shared";
 import { appendStatusStage } from "./shared";
 import { jobFieldsForStage } from "../jobStage/shared";
 import { resolveStageTypeForStatusId } from "@/lib/jobs/resolve";
+import { writeJobMatch } from "@/lib/jobs/writeJobMatch";
 
 export const updateJobStatus = async (
   jobId: string,
@@ -57,10 +58,7 @@ export const saveJobMatchResult = async (
   try {
     const user = await requireUser();
 
-    await prisma.job.update({
-      where: { id: jobId, userId: user.id },
-      data: { matchScore, matchData },
-    });
+    await writeJobMatch(user.id, jobId, matchScore, matchData);
 
     return { success: true };
   } catch (error) {
