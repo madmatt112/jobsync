@@ -11,7 +11,7 @@ import {
   buildJobMatchPrompt,
 } from "@/lib/ai/prompts/job-match";
 import { parseJobMatch } from "@/lib/ai/jobMatch/parse";
-import { MATCH_PROVIDER_OPTIONS } from "@/lib/ai/matchProviderOptions";
+import { matchProviderOptions } from "@/lib/ai/matchProviderOptions";
 import { TEMPERATURES } from "@/lib/ai/config";
 import { APP_CONSTANTS } from "@/lib/constants";
 import {
@@ -134,7 +134,7 @@ export async function runServerMatch(
           abortSignal: signal,
           providerOptions: {
             ollama: { options: { num_ctx: APP_CONSTANTS.AI_OLLAMA_NUM_CTX } },
-            ...MATCH_PROVIDER_OPTIONS,
+            ...matchProviderOptions(model),
           },
         });
         span.setAttrs(
