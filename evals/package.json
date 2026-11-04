@@ -7,6 +7,7 @@
     "eval:job-match": "promptfoo eval --no-cache --env-file ../.env --config job-match/promptfooconfig.yaml",
     "eval:automation-match": "promptfoo eval --no-cache --env-file ../.env --config job-match/automation.promptfooconfig.yaml",
     "bakeoff:export": "cd .. && tsx evals/job-match-bakeoff/export.ts",
+    "bakeoff:format": "node job-match-bakeoff/format-postings.mjs",
     "bakeoff:label": "node job-match-bakeoff/label-server.mjs",
     "bakeoff:run": "node job-match-bakeoff/run.mjs",
     "bakeoff:report": "cd .. && tsx evals/job-match-bakeoff/report.ts",
