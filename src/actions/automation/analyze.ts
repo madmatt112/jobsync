@@ -11,7 +11,7 @@ import {
   preprocessResume,
   preprocessJob,
 } from "@/lib/ai";
-import { MATCH_PROVIDER_OPTIONS } from "@/lib/ai/matchProviderOptions";
+import { matchProviderOptions } from "@/lib/ai/matchProviderOptions";
 import { getResumeById } from "@/actions/profile.actions";
 import { getJobDetails } from "@/actions/job.actions";
 import { defaultUserSettings } from "@/models/userSettings.model";
@@ -115,7 +115,7 @@ export async function analyzeDiscoveredJob(jobId: string): Promise<{
           system: JOB_MATCH_SYSTEM_PROMPT,
           prompt: promptText,
           temperature: 0.3,
-          providerOptions: MATCH_PROVIDER_OPTIONS,
+          providerOptions: matchProviderOptions(ai.model || "llama3.2"),
         });
         span.setAttrs(
           genAiResponseAttrs({

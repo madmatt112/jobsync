@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOllama } from "ollama-ai-provider-v2";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -12,7 +13,11 @@ export const PROVIDER_FACTORIES: Record<
 > = {
   openai: (apiKey, model) => createOpenAI({ apiKey })(model),
   openrouter: (apiKey, model) =>
-    createOpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" })(model),
+    createOpenAICompatible({
+      name: "openrouter",
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    })(model),
   deepseek: (apiKey, model) => createDeepSeek({ apiKey })(model),
   ollama: (baseURL, model) =>
     createOllama({ baseURL: baseURL + "/api" })(model),

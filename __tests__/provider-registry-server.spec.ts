@@ -3,11 +3,12 @@ vi.mock("server-only", () => ({}));
 
 // Mock AI SDK packages to avoid loading provider implementations in tests
 vi.mock("@ai-sdk/openai", () => ({ createOpenAI: vi.fn() }));
+vi.mock("@ai-sdk/openai-compatible", () => ({ createOpenAICompatible: vi.fn() }));
 vi.mock("@ai-sdk/deepseek", () => ({ createDeepSeek: vi.fn() }));
 vi.mock("@ai-sdk/google", () => ({ createGoogleGenerativeAI: vi.fn() }));
 vi.mock("ollama-ai-provider-v2", () => ({ createOllama: vi.fn() }));
 
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   PROVIDER_FACTORIES,
   PROVIDER_VERIFIERS,
@@ -107,17 +108,18 @@ describe("PROVIDER_VERIFIERS – openrouter", () => {
 });
 
 describe("PROVIDER_FACTORIES – openrouter", () => {
-  it("uses createOpenAI with the openrouter baseURL", () => {
+  it("uses createOpenAICompatible with the openrouter baseURL", () => {
     const mockModelInstance = { modelId: "openai/gpt-4o" };
     const mockChainFn = vi.fn().mockReturnValue(mockModelInstance);
-    (createOpenAI as any).mockReturnValue(mockChainFn);
+    (createOpenAICompatible as any).mockReturnValue(mockChainFn);
 
     const result = PROVIDER_FACTORIES.openrouter(
       "sk-or-apikey",
       "openai/gpt-4o",
     );
 
-    expect(createOpenAI).toHaveBeenCalledWith({
+    expect(createOpenAICompatible).toHaveBeenCalledWith({
+      name: "openrouter",
       apiKey: "sk-or-apikey",
       baseURL: "https://openrouter.ai/api/v1",
     });
@@ -127,20 +129,20 @@ describe("PROVIDER_FACTORIES – openrouter", () => {
 
   it("passes the model name through to the factory chain", () => {
     const mockChainFn = vi.fn().mockReturnValue({});
-    (createOpenAI as any).mockReturnValue(mockChainFn);
+    (createOpenAICompatible as any).mockReturnValue(mockChainFn);
 
     PROVIDER_FACTORIES.openrouter("sk-or-key", "google/gemini-flash");
 
     expect(mockChainFn).toHaveBeenCalledWith("google/gemini-flash");
   });
 
-  it("passes the API key through to createOpenAI", () => {
+  it("passes the API key through to createOpenAICompatible", () => {
     const mockChainFn = vi.fn().mockReturnValue({});
-    (createOpenAI as any).mockReturnValue(mockChainFn);
+    (createOpenAICompatible as any).mockReturnValue(mockChainFn);
 
     PROVIDER_FACTORIES.openrouter("sk-or-specific-key", "any-model");
 
-    expect(createOpenAI).toHaveBeenCalledWith(
+    expect(createOpenAICompatible).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: "sk-or-specific-key" }),
     );
   });

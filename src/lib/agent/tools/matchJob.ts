@@ -19,7 +19,7 @@ import {
   runNestedGeneration,
   type NestedGenerationGuard,
 } from "@/lib/agent/nestedGeneration";
-import { MATCH_PROVIDER_OPTIONS } from "@/lib/ai/matchProviderOptions";
+import { matchProviderOptions } from "@/lib/ai/matchProviderOptions";
 import type { AgentMatchJobResult } from "@/models/agent.model";
 import type { JobMatchData } from "@/models/ai.schemas";
 
@@ -107,7 +107,7 @@ export function buildMatchJobTool(ctx: MatchJobContext) {
           "jobsync.input.resume_chars": resumePre.data.normalizedText.length,
           "jobsync.input.job_chars": jobPre.data.normalizedText.length,
         },
-        extraProviderOptions: MATCH_PROVIDER_OPTIONS,
+        extraProviderOptions: matchProviderOptions(ctx.modelName),
       });
       if (generation.status === "busy") {
         return {
